@@ -3,9 +3,13 @@ import netCDF4
 
 
 if __name__ == '__main__':
-    for root, _, files in os.walk(r"D:\Data\PrecipitationCorrection"):
+    # 修改数据路径与保存路径
+    data_path = r"E:\Data\PrecipitationCorrection\CASE\CASE1\TIME00"
+    save_path = r"./divided case"
+
+    for root, _, files in os.walk(data_path):
         for file in files:
-            if file.endswith(".nc"):
+            if file.endswith("monthly.nc"):
                 path = os.path.join(root, file)
                 print(file)
                 nc = netCDF4.Dataset(path)
@@ -17,14 +21,14 @@ if __name__ == '__main__':
                 # 长江上游（中矩形）：经度范围：100-110 纬度范围：24-35 rowmin:46 rowmax:87 colmin:80 colmax:115
                 # 长江中下游（右矩形）：经度范围：110-122 纬度范围：24-35 rowmin:46 rowmax:87 colmin:116 colmax:157
 
-                if not os.path.exists("divided_nc"):
-                    os.mkdir("divided_nc")
+                if not os.path.exists(save_path):
+                    os.mkdir(save_path)
                 # 流域经纬度划分
                 # 金沙江流域划分
                 JSJ_XLONG = XLONG[53:96, 48:87]
                 JSJ_XLAT = XLAT[53:96, 48:87]
                 JSJ_PRAVG = PRAVG[:, 53:96, 48:87]
-                JSJ_nc = netCDF4.Dataset(os.path.join("divided_nc", 'JSJ_' + file), 'w', format='NETCDF4')
+                JSJ_nc = netCDF4.Dataset(os.path.join(save_path, 'JSJ_' + file), 'w', format='NETCDF4')
                 JSJ_nc.createDimension('time', time.shape[0])
                 JSJ_nc.createDimension('x', JSJ_XLONG.shape[0])
                 JSJ_nc.createDimension('y', JSJ_XLONG.shape[1])
@@ -41,7 +45,7 @@ if __name__ == '__main__':
                 CJSY_XLONG = XLONG[46:88, 80:116]
                 CJSY_XLAT = XLAT[46:88, 80:116]
                 CJSY_PRAVG = PRAVG[:, 46:88, 80:116]
-                CJSY_nc = netCDF4.Dataset(os.path.join("divided_nc", 'CJSY_' + file), 'w', format='NETCDF4')
+                CJSY_nc = netCDF4.Dataset(os.path.join(save_path, 'CJSY_' + file), 'w', format='NETCDF4')
                 CJSY_nc.createDimension('time', time.shape[0])
                 CJSY_nc.createDimension('x', CJSY_XLONG.shape[0])
                 CJSY_nc.createDimension('y', CJSY_XLONG.shape[1])
@@ -57,7 +61,7 @@ if __name__ == '__main__':
                 CJZXY_XLONG = XLONG[46:88, 116:158]
                 CJZXY_XLAT = XLAT[46:88, 116:158]
                 CJZXY_PRAVG = PRAVG[:, 46:88, 116:158]
-                CJZXY_nc = netCDF4.Dataset(os.path.join("divided_nc", 'CJZXY_' + file), 'w', format='NETCDF4')
+                CJZXY_nc = netCDF4.Dataset(os.path.join(save_path, 'CJZXY_' + file), 'w', format='NETCDF4')
                 CJZXY_nc.createDimension('time', time.shape[0])
                 CJZXY_nc.createDimension('x', CJZXY_XLONG.shape[0])
                 CJZXY_nc.createDimension('y', CJZXY_XLONG.shape[1])
