@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats, interpolate
-# from scipy import interpolate
+from ncParseUtils import *
+import netCDF4
 
 
 def get_cdf(data_in):
@@ -96,7 +97,7 @@ class QDM:
 
 
 def mse(y1, y2):
-    return (np.abs(y1-y2)).mean()
+    return (np.abs(y1 - y2)).mean()
 
 
 def main():
@@ -104,26 +105,20 @@ def main():
 
     :return:
     """
-    x = np.random.normal(0, 2, 1000)*3+5  # (1000, )  输入x
-    y_model = x
+    obs, remove = ObsParser.get_many_pravg(r"../divide area/divided obs", 2013, 2018, "JSJ", 4)
+    case = CaseParser.get_many_pravg(r"../divide area/divided case", 2013, 2018, "JSJ", 0, remove)
 
-    x = np.random.normal(0, 2, 1000)*3+5  # (1000, )  输出y  obs
-    y_true = x
+    test_obs, _ = ObsParser.get_one_pravg(r"../divide area/divided obs/JSJ_obs_prec_rcm_201904.nc")
+    test_case = CaseParser.get_one_pravg(r"../divide area/divided case/JSJ_PRAVG_2019030200c01_2019_monthly.nc", 0, remove)
 
-    uqdm = QDM(y_model, y_true)
-    x = np.random.normal(0, 2, 1000)*3+5  # 新的 输入x
-    y_model = x
+    uqdm = QDM(case, obs)
+    model = uqdm.predict(test_case)  # 得到订正后的y
 
-    x = np.random.normal(0, 2, 1000)*3+5
-    y_true = x
-    y_corr_qd = uqdm.predict(y_model)   # 得到订正后的y
-
-    print(mse(y_true, y_model))
-    print(mse(y_true, y_corr_qd))
-    print(np.corrcoef(y_true, y_model))
-    print(np.corrcoef(y_true, y_corr_qd))
+    print("mse(obs, case):", mse(obs, case))
+    print("mse(test_obs, model):", mse(test_obs, model))
+    print("np.corrcoef(obs, case):", np.corrcoef(obs, case))
+    print("np.corrcoef(test_obs, model):", np.corrcoef(test_obs, model))
 
 
 if __name__ == '__main__':
     main()
-
