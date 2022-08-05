@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-
+import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 import numpy.ma as ma
@@ -45,9 +45,6 @@ class CaseParser:
                     filetime = CaseParser.get_filetime(file)
                     if stime <= filetime <= etime:
                         pravg = CaseParser.get_one_pravg(os.path.join(root, file), month_index, remove_index)
-                        # if remove_index:
-                        #     for i in remove_index[::-1]:
-                        #         pravg = np.delete(pravg, i)
                         pravgs = np.append(pravgs, pravg)
         return pravgs
 
@@ -61,13 +58,19 @@ class CaseParser:
         filetime = filename.split("_")[2][:-3]
         return datetime.strptime(filetime, "%Y%m%d%H")
 
+    @staticmethod
+    def get_filename(year, month_day, area, case_num):
+        filename = f"{area}_PRAVG_{year + month_day}00c{case_num}_{year}_monthly.nc"
+        return filename
+
 
 class ObsParser:
     @staticmethod
-    def get_one_pravg(nc_path):
+    def get_one_pravg(nc_path, flatten=True):
         """
         提取时间范围
-        :param nc_path:
+        :param nc_path:nc文件路径
+        :param flatten: nc文件路径
         :return:
         """
         obs = netCDF4.Dataset(nc_path)
@@ -84,7 +87,7 @@ class ObsParser:
         return pravg, remove_index
 
     @staticmethod
-    def get_many_pravg(nc_dir, syear, eyear, area, month):
+    def get_many_pravg(nc_dir, syear, eyear, area, month, flatten=True):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -92,6 +95,7 @@ class ObsParser:
         :param eyear: 结束年份
         :param area: 区域名称
         :param month: 提取月份
+        :param flatten: 是否变为一维
         :return: 一维合并的PRAVG数组
         """
         stime = datetime(year=syear, month=1, day=1)
@@ -102,7 +106,7 @@ class ObsParser:
                 if file.startswith(area):
                     filetime = ObsParser.get_filetime(file)
                     if stime <= filetime <= etime and filetime.month == month:
-                        pravg, remove_index = ObsParser.get_one_pravg(os.path.join(root, file))
+                        pravg, remove_index = ObsParser.get_one_pravg(os.path.join(root, file), flatten)
                         pravgs = np.append(pravgs, pravg)
             return pravgs, remove_index
 
@@ -116,6 +120,11 @@ class ObsParser:
         filetime = filename.split("_")[4][:-3]
         return datetime.strptime(filetime, "%Y%m")
 
+    @staticmethod
+    def get_filename(year, month, area):
+        filename = f"{area}_obs_prec_rcm_{year + month}.nc"
+        return filename
+
 
 class OtherUtils:
     @staticmethod
@@ -125,10 +134,97 @@ class OtherUtils:
         return start + delta
 
     @staticmethod
-    def cross_train(train_years, test_years):
+    def cal_TCC(corr_cases, hsty_case, test_obses, hsty_obs):
         """
-        交叉验证训练
-        :param train_years:
-        :param test_years:
-        :return:
+        计算时间相关系数TCC
+        :param corr_cases: 订正后的数组列表（列表每一行对应某年的订正结果）
+        :param hsty_case: 以往全部的case（二维数组）
+        :param test_obses: 对应订正数组的观测值列表（列表每一行对应某年的观测值）
+        :param hsty_obs: 以往全部的obs（二维数组）
+        :return: TCC(一个格点对应一个值)
         """
+        hsty_pre = hsty_case.reshape(int(len(hsty_case) / len(corr_cases[0])), len(corr_cases[0]))
+        hsty_obs = hsty_obs.reshape(int(len(hsty_obs) / len(test_obses[0])), len(test_obses[0]))
+        avg_pre = np.mean(hsty_pre, axis=0)
+        avg_obs = np.mean(hsty_obs, axis=0)
+
+        # TCC公式分子
+        molecular = np.zeros([len(corr_cases[0])])
+        # 分母左半边， 分母右半边
+        denominator_left, denominator_right = np.zeros([len(corr_cases[0])]), np.zeros([len(corr_cases[0])])
+
+        for i in range(len(corr_cases)):
+            molecular += (corr_cases[i] - avg_pre) * (test_obses[i] - avg_obs)
+            denominator_left += np.square(corr_cases[i] - avg_pre)
+            denominator_right += np.square(test_obses[i] - avg_obs)
+
+        TCC = molecular / np.sqrt(denominator_left * denominator_right)
+        return TCC
+
+    @staticmethod
+    def cal_ACC(corr_cases, test_obses):
+        """
+        计算距平相关系数ACC
+        :param corr_cases: 所有年份的订正结果
+        :param test_obses: 所有年份订正结果对应的观测值
+        :return: ACC列表（每个年份对应一个值）
+        """
+        deltaRfs, deltaRos = [], []
+        for i in range(len(corr_cases)):
+            deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)
+            deltaRfs.append(deltaRf)
+            deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)
+            deltaRos.append(deltaRo)
+
+        deltaRfs = ma.masked_array(deltaRfs)
+        avg_deltaRf = np.mean(deltaRfs, axis=0)
+        deltaRos = ma.masked_array(deltaRos)
+        avg_deltaRo = np.mean(deltaRos, axis=0)
+
+        # i对应各预测年份
+        ACCs = []
+        for i in range(len(corr_cases)):
+            # ACC公式分子
+            molecular = np.sum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
+            denominator_left = np.sum(np.square(deltaRfs[i] - avg_deltaRf))
+            denominator_right = np.sum(np.square(deltaRos[i] - avg_deltaRo))
+            ACC = molecular / np.sqrt(denominator_left * denominator_right)
+            ACCs.append(ACC)
+        return ACCs
+
+    @staticmethod
+    def cal_anomaly_percentage(pre, all_pre):
+        """
+        计算距平百分率, （实测值-同期历史均值）/同期历史均值）
+        :param pre: 当年预测值
+        :param all_pre: 全部年的预测值
+        :return: 距平百分率
+        """
+        all_pre = ma.masked_array(all_pre)
+        avg_pre = np.mean(all_pre, axis=0)
+        return (pre - avg_pre) / avg_pre
+
+    @staticmethod
+    def d_2_2d(d, length):
+        two_d = d.reshape(int(len(d) / length), length)
+        return two_d
+
+
+class PaintUtils:
+    @staticmethod
+    def paint_ACC(xrange, case_acc, corr_case_acc):
+        """
+        ACC绘图
+        :param xrange: x轴年范围
+        :param corr_case_acc:
+        :param case_acc:
+        :return: 图片对象
+        """
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签SimHei
+        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+        plt.ylim(-1, 1)
+        case_line, = plt.plot(list(xrange), case_acc, linestyle='-', color='k', marker='^', markersize=7)
+        corr_case_line, = plt.plot(list(xrange), corr_case_acc, linestyle='-', color='r', marker='.', markersize=7)
+        plt.legend(handles=[case_line, corr_case_line], labels=["CASE回报", "单变量订正"], loc="lower right")
+        return plt
