@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy.ma as ma
 import numpy as np
 from scipy import stats, interpolate
-from ncParseUtils import *
+from utils import *
 import netCDF4
 
 
@@ -142,11 +142,17 @@ def loop_train():
 
         # 订正
         corr_case = uqdm.predict(test_case)  # 得到订正后的case
-        plt.plot(test_case, color='blue')
-        plt.plot(corr_case, color='orange')
-        plt.plot(test_obs, color="black")
-        plt.show()
-        plt.close()
+
+        # 绘制数据分布折线图
+        # plt.plot(test_case, color='blue')
+        # plt.plot(corr_case, color='orange')
+        # plt.plot(test_obs, color="black")
+        # plt.show()
+        # plt.close()
+
+        # 绘制数据分布直方图
+        # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 50, 30))
+        # hist_img.show()
 
         corr_cases.append(corr_case)
         test_obses.append(test_obs)
@@ -170,8 +176,8 @@ def loop_train():
 
     case_acc = OtherUtils.cal_ACC(part_cases, part_obses)
     corr_case_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
-    acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
-    acc_img.show()
+    # acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
+    # acc_img.show()
 
     print("---------------------")
     print("TCC:", tcc)
@@ -180,5 +186,7 @@ def loop_train():
 
 
 if __name__ == '__main__':
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签SimHei
+    plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
     # single_train()
     loop_train()
