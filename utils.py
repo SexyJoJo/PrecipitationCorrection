@@ -220,11 +220,28 @@ class PaintUtils:
         :param case_acc:
         :return: 图片对象
         """
-        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签SimHei
-        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
-
         plt.ylim(-1, 1)
         case_line, = plt.plot(list(xrange), case_acc, linestyle='-', color='k', marker='^', markersize=7)
         corr_case_line, = plt.plot(list(xrange), corr_case_acc, linestyle='-', color='r', marker='.', markersize=7)
         plt.legend(handles=[case_line, corr_case_line], labels=["CASE回报", "单变量订正"], loc="lower right")
+        return plt
+
+    @staticmethod
+    def paint_hist(before, after, obs, bins):
+        """
+        绘制数据分布直方图
+        :param before: 订正前
+        :param after: 订正后
+        :param obs: 原始值
+        :param bins: 图柱间隔
+
+        :return:
+        """
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签SimHei
+        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+        plt.hist(before, bins, alpha=0.5, label="订正前")
+        plt.hist(after, bins, alpha=0.5, label="订正后")
+        plt.hist(obs, bins, alpha=0.5, label="观测值")
+        plt.legend(loc='lower right')
         return plt
