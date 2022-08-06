@@ -240,8 +240,19 @@ class PaintUtils:
         plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签SimHei
         plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
+        plt.title("订正前")
         plt.hist(before, bins, alpha=0.5, label="订正前")
+        plt.show()
+        plt.close()
+
+        plt.title("订正后")
         plt.hist(after, bins, alpha=0.5, label="订正后")
+        plt.show()
+        plt.close()
+
+        plt.title("原始值")
         plt.hist(obs, bins, alpha=0.5, label="观测值")
-        plt.legend(loc='lower right')
+        plt.show()
+        plt.close()
+        # plt.legend(loc='lower right')
         return plt

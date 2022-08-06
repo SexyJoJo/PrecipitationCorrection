@@ -151,7 +151,7 @@ def loop_train():
         # plt.close()
 
         # 绘制数据分布直方图
-        # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 50, 30))
+        hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
         # hist_img.show()
 
         corr_cases.append(corr_case)
