@@ -75,13 +75,10 @@ class QM:
 
 class QDM:
     def __init__(self, model_data, true_data):
-        true_data_cdf = get_cdf(true_data)
-        # print(true_data_cdf)
-        # print(true_data)
+        true_data_cdf = get_cdf(true_data)  # obs
         self.true_data_icdf_func = get_icdf_func(true_data_cdf, true_data)
-        # stats.norm.isf()
 
-        model_data_cdf = get_cdf(model_data)
+        model_data_cdf = get_cdf(model_data)    # case
         self.model_data_icdf_func = get_icdf_func(model_data_cdf, model_data)
 
     def __call__(self, *args, **kwargs):
@@ -94,6 +91,13 @@ class QDM:
         # print(data_in_cdf)
         x_corr = self.true_data_icdf_func(data_in_cdf) + data_in - self.model_data_icdf_func(data_in_cdf)
         # print(x_corr)
+        # plt.plot(data_in, label="data_in")
+        # plt.plot(data_in_cdf, label="data_in_cdf")
+        # plt.plot(self.true_data_icdf_func(data_in_cdf), label="true_data_icdf_func(data_in_cdf)")
+        # plt.plot(self.model_data_icdf_func(data_in_cdf), label="model_data_icdf_func(data_in_cdf)")
+        # plt.plot(x_corr, label="x_corr")
+        # plt.legend()
+        # plt.show()
         return x_corr
 
 
@@ -144,14 +148,14 @@ def loop_train():
         corr_case = uqdm.predict(test_case)  # 得到订正后的case
 
         # 绘制数据分布折线图
-        # plt.plot(test_case, color='blue')
-        # plt.plot(corr_case, color='orange')
-        # plt.plot(test_obs, color="black")
-        # plt.show()
-        # plt.close()
+        plt.plot(test_case, color='blue')
+        plt.plot(corr_case, color='orange')
+        plt.plot(test_obs, color="black")
+        plt.show()
+        plt.close()
 
         # 绘制数据分布直方图
-        hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
+        # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
         # hist_img.show()
 
         corr_cases.append(corr_case)
