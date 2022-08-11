@@ -89,7 +89,8 @@ class QDM:
         # data_in_cdf[data_in_cdf > 1.] = 1.
         # data_in_cdf[data_in_cdf < 0.] = 0.
         # print(data_in_cdf)
-        x_corr = self.true_data_icdf_func(data_in_cdf) + data_in - self.model_data_icdf_func(data_in_cdf)
+        x_corr = self.true_data_icdf_func(data_in_cdf)
+        # x_corr = self.true_data_icdf_func(data_in_cdf) + data_in - self.model_data_icdf_func(data_in_cdf)
         # print(x_corr)
         # plt.plot(data_in, label="data_in")
         # plt.plot(data_in_cdf, label="data_in_cdf")
@@ -147,12 +148,12 @@ def loop_train():
         # 订正
         corr_case = uqdm.predict(test_case)  # 得到订正后的case
 
-        # 绘制数据分布折线图
-        plt.plot(test_case, color='blue')
-        plt.plot(corr_case, color='orange')
-        plt.plot(test_obs, color="black")
-        plt.show()
-        plt.close()
+        # # 绘制数据分布折线图
+        # plt.plot(test_case, color='blue')
+        # plt.plot(corr_case, color='orange')
+        # plt.plot(test_obs, color="black")
+        # plt.show()
+        # plt.close()
 
         # 绘制数据分布直方图
         # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
@@ -180,8 +181,8 @@ def loop_train():
 
     case_acc = OtherUtils.cal_ACC(part_cases, part_obses)
     corr_case_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
-    # acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
-    # acc_img.show()
+    acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
+    acc_img.show()
 
     print("---------------------")
     print("TCC:", tcc)
