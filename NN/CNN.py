@@ -4,6 +4,34 @@ import torch.utils.data as Data
 import torchvision
 import matplotlib.pyplot as plt
 
+torch.manual_seed(1)  # 为了每次的实验结果一致
+# 设置超参数
+epoches = 2
+batch_size = 50
+learning_rate = 0.001
+
+# 训练集
+train_data = torchvision.datasets.MNIST(
+    root="./MINST/",  # 训练数据保存路径
+    train=True,  # True为下载训练数据集，False为下载测试数据集
+    transform=torchvision.transforms.ToTensor(),  # 数据范围已从(0-255)压缩到(0,1)
+    download=True,  # 是否需要下载
+)
+# 显示训练集中的第一张图片
+print(train_data.train_data.size())  # [60000,28,28]    60000张图片，图片为28*28像素
+pic_matrix = train_data.train_data[0].numpy()
+plt.imshow(pic_matrix, cmap='Greys')
+plt.show()
+
+# 测试集
+test_data = torchvision.datasets.MNIST(root="./MINST/", train=False, download=True)
+print(test_data.test_data.size())  # [10000, 28, 28]
+test_x = torch.unsqueeze(test_data.test_data, dim=1).type(torch.FloatTensor) / 255
+test_y = test_data.test_labels
+
+# 将训练数据装入Loader中
+train_loader = Data.DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True, num_workers=3)
+
 
 class CNN(nn.Module):
     def __init__(self):
@@ -74,35 +102,9 @@ def main():
 
         test_output = cnn(test_x[:10])
         pred_y = torch.max(test_output, 1)[1].data.numpy().squeeze()
-        print(pred_y)
-        print(test_y[:10])
+        print("预测值:", pred_y)
+        print("真实值:", test_y[:10])
 
 
 if __name__ == '__main__':
-    torch.manual_seed(1)  # 为了每次的实验结果一致
-    # 设置超参数
-    epoches = 2
-    batch_size = 50
-    learning_rate = 0.001
-
-    # 训练集
-    train_data = torchvision.datasets.MNIST(
-        root="./MINST/",  # 训练数据保存路径
-        train=True,  # True为下载训练数据集，False为下载测试数据集
-        transform=torchvision.transforms.ToTensor(),  # 数据范围已从(0-255)压缩到(0,1)
-        download=False,  # 是否需要下载
-    )
-    # 显示训练集中的第一张图片
-    print(train_data.train_data.size())  # [60000,28,28]    60000张图片，图片为28*28像素
-    pic_matrix = train_data.train_data[0].numpy()
-    plt.imshow(pic_matrix, cmap='Greys')
-    plt.show()
-
-    # 测试集
-    test_data = torchvision.datasets.MNIST(root="./MINST/", train=False, download=False)
-    print(test_data.test_data.size())  # [10000, 28, 28]
-    test_x = torch.unsqueeze(test_data.test_data, dim=1).type(torch.FloatTensor) / 255
-    test_y = test_data.test_labels
-
-    # 将训练数据装入Loader中
-    train_loader = Data.DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True, num_workers=3)
+    main()
