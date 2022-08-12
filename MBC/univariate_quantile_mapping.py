@@ -1,9 +1,6 @@
-import matplotlib.pyplot as plt
-import numpy.ma as ma
-import numpy as np
-from scipy import stats, interpolate
+"""单变量订正"""
+from scipy import interpolate
 from utils import *
-import netCDF4
 
 
 def get_cdf(data_in):
@@ -11,16 +8,7 @@ def get_cdf(data_in):
 
     :return:
     """
-    # res_freq = stats.relfreq(data_in, numbins=data_in.shape[0])
-    # cdf_value = stats.norm.cdf(data_in)
-    # mean = data_in.mean()
-    # print(mean)
-    # std = data_in.std(ddof=1)
-    # cdf = stats.norm.cdf(data_in, loc=mean, scale=std)
-
-    # print(std)
     data_arg = np.argsort(data_in)
-    # cdf_value = np.cumsum(res_freq[0])
     sorted_random_data = data_in[data_arg]
     cdf_value = 1. * np.arange(len(sorted_random_data)) / float(len(sorted_random_data) - 1)
     cdf = np.zeros_like(cdf_value)
@@ -44,7 +32,6 @@ def get_icdf_func(p_cdf, data_in):
 
     :return:
     """
-    # p_cdf = get_cdf(data_in)
     inter = interpolate.interp1d(p_cdf, data_in, kind="cubic", bounds_error=False, fill_value=(0., 1.))
     return inter
 
@@ -86,19 +73,7 @@ class QDM:
 
     def predict(self, data_in):
         data_in_cdf = get_cdf(data_in)
-        # data_in_cdf[data_in_cdf > 1.] = 1.
-        # data_in_cdf[data_in_cdf < 0.] = 0.
-        # print(data_in_cdf)
         x_corr = self.true_data_icdf_func(data_in_cdf)
-        # x_corr = self.true_data_icdf_func(data_in_cdf) + data_in - self.model_data_icdf_func(data_in_cdf)
-        # print(x_corr)
-        # plt.plot(data_in, label="data_in")
-        # plt.plot(data_in_cdf, label="data_in_cdf")
-        # plt.plot(self.true_data_icdf_func(data_in_cdf), label="true_data_icdf_func(data_in_cdf)")
-        # plt.plot(self.model_data_icdf_func(data_in_cdf), label="model_data_icdf_func(data_in_cdf)")
-        # plt.plot(x_corr, label="x_corr")
-        # plt.legend()
-        # plt.show()
         return x_corr
 
 
@@ -148,12 +123,12 @@ def loop_train():
         # 订正
         corr_case = uqdm.predict(test_case)  # 得到订正后的case
 
-        # # 绘制数据分布折线图
-        # plt.plot(test_case, color='blue')
-        # plt.plot(corr_case, color='orange')
-        # plt.plot(test_obs, color="black")
-        # plt.show()
-        # plt.close()
+        # 绘制数据分布折线图
+        plt.plot(test_case, color='blue')
+        plt.plot(corr_case, color='orange')
+        plt.plot(test_obs, color="black")
+        plt.show()
+        plt.close()
 
         # 绘制数据分布直方图
         # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
@@ -181,8 +156,8 @@ def loop_train():
 
     case_acc = OtherUtils.cal_ACC(part_cases, part_obses)
     corr_case_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
-    acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
-    acc_img.show()
+    # acc_img = PaintUtils.paint_ACC(range(1996, 2020), case_acc, corr_case_acc)
+    # acc_img.show()
 
     print("---------------------")
     print("TCC:", tcc)
