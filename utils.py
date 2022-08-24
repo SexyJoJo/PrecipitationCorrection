@@ -134,29 +134,25 @@ class OtherUtils:
         return start + delta
 
     @staticmethod
-    def cal_TCC(corr_cases, hsty_case, test_obses, hsty_obs):
+    def cal_TCC(predicts, obses):
         """
         计算时间相关系数TCC
-        :param corr_cases: 订正后的数组列表（列表每一行对应某年的订正结果）
-        :param hsty_case: 以往全部的case（二维数组）
-        :param test_obses: 对应订正数组的观测值列表（列表每一行对应某年的观测值）
-        :param hsty_obs: 以往全部的obs（二维数组）
+        :param predicts: 预测值， 维度：[年份， 预测值]
+        :param obses: 对应预测值的观测值， 维度：[年份， 观测值]
         :return: TCC(一个格点对应一个值)
         """
-        hsty_pre = hsty_case.reshape(int(len(hsty_case) / len(corr_cases[0])), len(corr_cases[0]))
-        hsty_obs = hsty_obs.reshape(int(len(hsty_obs) / len(test_obses[0])), len(test_obses[0]))
-        avg_pre = np.mean(hsty_pre, axis=0)
-        avg_obs = np.mean(hsty_obs, axis=0)
+        avg_pre = np.mean(predicts, axis=0)
+        avg_obs = np.mean(obses, axis=0)
 
         # TCC公式分子
-        molecular = np.zeros([len(corr_cases[0])])
+        molecular = np.zeros([len(predicts[0])])
         # 分母左半边， 分母右半边
-        denominator_left, denominator_right = np.zeros([len(corr_cases[0])]), np.zeros([len(corr_cases[0])])
+        denominator_left, denominator_right = np.zeros([len(predicts[0])]), np.zeros([len(predicts[0])])
 
-        for i in range(len(corr_cases)):
-            molecular += (corr_cases[i] - avg_pre) * (test_obses[i] - avg_obs)
-            denominator_left += np.square(corr_cases[i] - avg_pre)
-            denominator_right += np.square(test_obses[i] - avg_obs)
+        for i in range(len(predicts)):
+            molecular += (predicts[i] - avg_pre) * (obses[i] - avg_obs)
+            denominator_left += np.square(predicts[i] - avg_pre)
+            denominator_right += np.square(obses[i] - avg_obs)
 
         TCC = molecular / np.sqrt(denominator_left * denominator_right)
         return TCC
