@@ -124,12 +124,12 @@ def loop_train():
         # 订正
         corr_case = uqdm.predict(test_case)  # 得到订正后的case
 
-        # # 绘制数据分布折线图
-        # plt.plot(test_case, color='blue')
-        # plt.plot(corr_case, color='orange')
-        # plt.plot(test_obs, color="black")
-        # plt.show()
-        # plt.close()
+        # 绘制数据分布折线图
+        plt.plot(test_case, color='blue')
+        plt.plot(corr_case, color='orange')
+        plt.plot(test_obs, color="black")
+        plt.show()
+        plt.close()
 
         # 绘制数据分布直方图
         # hist_img = PaintUtils.paint_hist(test_case, corr_case, test_obs, bins=np.linspace(-10, 40, 25))
@@ -149,10 +149,8 @@ def loop_train():
     # TCC相关
     corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)
     case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)
-    plt.plot(corr_tcc, label="Corr-TCC")
-    plt.plot(case_tcc, label="Case-TCC")
-    plt.legend()
-    plt.show()
+    PaintUtils.paint_TCC(corr_tcc, "Corr-TCC").show()
+    PaintUtils.paint_TCC(case_tcc, "Case-TCC").show()
 
     # ACC相关
     part_obses, remove = ObsParser.get_many_pravg(r"../divide area/divided obs", 1996, 2019, "JSJ", 4)

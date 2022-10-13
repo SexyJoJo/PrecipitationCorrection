@@ -223,6 +223,14 @@ class PaintUtils:
         return plt
 
     @staticmethod
+    def paint_TCC(tcc, label=None):
+        avg = np.mean(tcc)
+        plt.axhline(y=avg, color='b', linestyle=':')
+        plt.plot(tcc, label=label)
+        plt.legend()
+        return plt
+
+    @staticmethod
     def paint_hist(before, after, obs, bins):
         """
         绘制数据分布直方图

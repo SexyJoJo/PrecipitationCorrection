@@ -11,17 +11,21 @@ def get_time(delta):
 
 
 if __name__ == '__main__':
-    for root, _, files in os.walk(r"divided_nc"):
-        for file in files:
-            if file.endswith("monthly.nc"):
-                path = os.path.join(root, file)
-                print(file)
-                nc = netCDF4.Dataset(path)
-                time = nc["time"][:]
-                PRAVG = nc["PRAVG"][:]
-                times = []
-                for ti, hour in enumerate(time):
-                    print(get_time(hour))
-                    print("Mean:", np.mean(PRAVG[ti]))
-                    print("Median:", np.median(PRAVG[ti]))
-                    print("")
+    # for root, _, files in os.walk(r"divided_nc"):
+    #     for file in files:
+    #         if file.endswith("monthly.nc"):
+    #             path = os.path.join(root, file)
+    #             print(file)
+    #             nc = netCDF4.Dataset(path)
+    #             time = nc["time"][:]
+    #             PRAVG = nc["PRAVG"][:]
+    #             times = []
+    #             for ti, hour in enumerate(time):
+    #                 print(get_time(hour))
+    #                 print("Mean:", np.mean(PRAVG[ti]))
+    #                 print("Median:", np.median(PRAVG[ti]))
+    #                 print("")
+
+    nc = netCDF4.Dataset("China_10RB_0.1x0.1.nc")   # 十大流域地图数据
+    print(nc["lon"][:])
+
