@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 import numpy.ma as ma
+from dateutil.relativedelta import relativedelta
 
 
 class CaseParser:
@@ -47,6 +48,37 @@ class CaseParser:
                         pravg = CaseParser.get_one_pravg(os.path.join(root, file), month_index, remove_index)
                         pravgs = np.append(pravgs, pravg)
         return pravgs
+
+    @staticmethod
+    def get_one_2d_pravg(nc_path):
+        """
+        提取单个case文件的某个月分的PRAVG值(二维格点)
+        :param nc_path: nc文件路径
+        :param month_index: 提取PRAVG所用的的月份索引
+        :param remove_index: 需要删除的pravg格点索引
+        :return: 一维PRAVG数组
+        """
+        case = netCDF4.Dataset(nc_path)
+        pravg = case.variables["PRAVG"][:]  # 转换单位为mm/day
+        # if remove_index:
+        #     for i in remove_index[::-1]:
+        #         pravg = np.delete(pravg, i)
+        return pravg
+
+    @staticmethod
+    def get_many_2d_pravg(nc_dir, syear, eyear, area):
+        stime = datetime(year=syear, month=1, day=1)
+        etime = datetime(year=eyear + 1, month=1, day=1)
+
+        pravgs = []
+        for root, _, files in os.walk(nc_dir):
+            for i, file in enumerate(files):
+                if file.startswith(area):
+                    filetime = CaseParser.get_filetime(file)
+                    if stime <= filetime <= etime:
+                        pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
+                        pravgs.append(pravg)
+        return np.array(pravgs)
 
     @staticmethod
     def get_filetime(filename):
@@ -109,6 +141,58 @@ class ObsParser:
                         pravg, remove_index = ObsParser.get_one_pravg(os.path.join(root, file), flatten)
                         pravgs = np.append(pravgs, pravg)
             return pravgs, remove_index
+
+    @staticmethod
+    def get_one_2d_pravg(nc_path):
+        """
+        提取时间范围
+        :param nc_path:nc文件路径
+        :return:
+        """
+        obs = netCDF4.Dataset(nc_path)
+        pravg = obs.variables["prec"][:] / 30  # 转换单位为mm/day
+        pravg = ObsParser.fill_na(pravg)
+        return pravg
+
+    @staticmethod
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months):
+        """
+        提取指定时间、地区范围内的PRAVG组成一维数组
+        :param nc_dir: 数据目录
+        :param syear: 起始年份
+        :param eyear: 结束年份
+        :param area: 区域名称
+        :param months: 提取月份
+        :return: 一维合并的PRAVG数组
+        """
+        pravgs = []
+        for year in range(syear, eyear+1):
+            curr_year_pravg = []
+            for month in months:
+                month = "0"+str(month) if len(str(month)) == 1 else str(month)
+                filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"
+                pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                curr_year_pravg.append(pravg)
+            pravgs.append(curr_year_pravg)
+        return np.array(pravgs)
+        # return ma.masked_array(pravgs)
+
+    @staticmethod
+    def fill_na(masked_array):
+        """矩阵中的邻近格点值填充缺失值"""
+        masked_array.fill_value = -9999
+        masked_array = masked_array.filled()
+        x = masked_array.copy()  # 替换后矩阵
+        index_r = np.array(np.where(x == -9999)).T
+        index_t = np.array(np.where(x != -9999)).T
+
+        for ir in index_r:
+            d = (ir - index_t) ** 2
+            d = d[:, 0] + d[:, 1]
+            p = index_t[np.argmin(d)]
+            x[ir[0], ir[1]] = x[p[0], p[1]]
+        return x
+
 
     @staticmethod
     def get_filetime(filename):

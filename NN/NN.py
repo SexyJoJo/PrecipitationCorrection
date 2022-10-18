@@ -3,6 +3,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+
+import utils
+from NN_CONST import *
+
 
 class NN(nn.Module):
     def __init__(self):
@@ -10,15 +15,14 @@ class NN(nn.Module):
 
         # 第一层卷积
         self.conv1 = nn.Sequential(
-            # 输入[6,43,39]
+            # 输入[5,43,39]
             nn.Conv2d(  # 定义1个2维的卷积核
-                in_channels=6,  # 输入通道的个数（单个case预报的月份个数）
+                in_channels=5,  # 输入通道的个数（单个case预报的月份个数）
                 out_channels=16,  # 输出通道（卷积核）的个数（越多则能识别更多边缘特征，任务不复杂赋值16，复杂可以赋值64）
                 kernel_size=(3, 3),  # 卷积核的大小
                 stride=(1, 1),  # 卷积核在图上滑动，每隔一个扫描的次数
                 padding=1,  # 周围填上多少圈的0, 一般为(kernel_size-1)/2
             ),
-            # 经过卷积层 传入池化层
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)  # 经过最大值池化 输出传入下一个卷积
         )
@@ -32,7 +36,6 @@ class NN(nn.Module):
                 stride=(1, 1),
                 padding=1
             ),
-            # 经过卷积 传入池化层
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)  # 经过池化 输出传入输出层
         )
@@ -46,7 +49,6 @@ class NN(nn.Module):
                 stride=(1, 1),
                 padding=1
             ),
-            # 经过卷积 输出[64, 14, 14] 传入池化层
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)  # 经过池化 输出传入输出层
         )
@@ -58,9 +60,6 @@ class NN(nn.Module):
         self.lstm = nn.LSTM(input_size=64 * 5 * 4, hidden_size=5, bidirectional=True)
         # 全连接
         self.fc = nn.Linear(5 * 2, 1)
-
-        # # Attention
-        # self.attention = AttentionSeq(5, hard=0.03)
 
     def attention_net(self, lstm_output, final_state):
         # batch_size = len(lstm_output)
@@ -89,53 +88,82 @@ class NN(nn.Module):
         return output
 
 
-# class AttentionSeq(nn.Module):
-#     def __init__(self, hidden_dim, hard=0.0):
-#         super(AttentionSeq, self).__init__()
-#         self.hidden_dim = hidden_dim
-#         self.dense = nn.Linear(hidden_dim, hidden_dim)
-#         self.hard = hard
-#
-#     def forward(self, features, mean=False):
-#         # [batch,seq,dim]
-#         batch_size, time_step, hidden_dim = features.size()
-#         weight = nn.Tanh()(self.dense(features))
-#
-#         # mask给负无穷使得权重为0
-#         mask_idx = torch.sign(torch.abs(features).sum(dim=-1))
-#         #       mask_idx = mask_idx.unsqueeze(-1).expand(batch_size, time_step, hidden_dim)
-#         mask_idx = mask_idx.unsqueeze(-1).repeat(1, 1, hidden_dim)
-#
-#         # 注意这里torch.where意思是按照第一个参数的条件对每个元素进行检查，若满足条件，则使用第二个元素进行填充，若不满足，则使用第三个元素填充。
-#         # 此时会填充一个极小的数----不能为零，具体请参考softmax中关于Tahn。
-#         # torch.full_like是按照第一个参数的形状，填充第二个参数。
-#         weight = torch.where(mask_idx == 1, weight,
-#                              torch.full_like(mask_idx, (-2 ** 32 + 1)))
-#         weight = weight.transpose(2, 1)
-#
-#         # 得出注意力分数
-#         weight = torch.nn.Softmax(dim=2)(weight)
-#         if self.hard != 0:  # hard mode
-#             weight = torch.where(weight > self.hard, weight, torch.full_like(weight, 0))
-#
-#         if mean:
-#             weight = weight.mean(dim=1)
-#             weight = weight.unsqueeze(1)
-#             weight = weight.repeat(1, hidden_dim, 1)
-#         weight = weight.transpose(2, 1)
-#         # 将注意力分数作用在输入值上
-#         features_attention = weight * features
-#         # 返回结果
-#         return features_attention
+class TrainDataset(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA))
+        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS))
+        # self.len = self.case_data.shape
+
+    def __getitem__(self, index):
+        return self.case_data[index], self.obs_data[index]
+
+    def __len__(self):
+        return self.case_data.shape[0]
+
+class TestDataset(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
+        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS))
+
+    def __getitem__(self, index):
+        return self.case_data[index], self.obs_data[index]
+
+    def __len__(self):
+        return self.case_data.shape[0]
+
+def train():
+    for epoch in range(EPOCH):
+        for i, data in enumerate(train_dataloader, 0):
+            inputs, target = data
+            inputs, target = inputs.to(device), target.to(device)
+            optimizer.zero_grad()
+
+            outputs = model(inputs)
+            loss = criterion(outputs, target)
+            print(epoch, i, loss.item())
+            loss.backward()
+            optimizer.step()
+
+# def test():
+#     correct = 0
+#     total = 0
+#     with torch.no_grad():
+#         for data in test_dataloader:
+#             images, labels = data
+#             images, labels = images.to(device), labels.to(device)
+#             outputs = model(images)
+#             _, predicted = torch.max(outputs.data, dim=1)
+#             total += labels.size(0)
+#             correct += (predicted == labels).sum().item()
+#     print('accuracy on test set: %d %% ' % (100*correct/total))
+#     return correct/total
 
 
-def main():
-    input = torch.ones((5, 6, 43, 39))  # 5个图片， 6个通道
-    model = NN()
-    output = model(input)
-    print(output)
-    test_input = torch.ones(1, )
+# 测试模型代码
+# def test_model():
+#     input = torch.ones((5, 6, 43, 39))  # 5个图片， 6个通道
+#     model = NN()
+#     output = model(input)
+#     print(output)
+#     test_input = torch.ones(1, )
+
+
+model = NN()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+criterion = torch.nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+# 加载数据集
+train_dataset = TrainDataset()
+train_dataloader = DataLoader(dataset=train_dataset)
+test_dataset = TestDataset()
+test_dataloader = DataLoader(dataset=test_dataset)
 
 
 if __name__ == '__main__':
-    main()
+
+    train()
