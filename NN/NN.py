@@ -13,22 +13,25 @@ class NN(nn.Module):
     def __init__(self):
         super(NN, self).__init__()
 
+        # 输入[batch, 5,43,39]
+        self.lstm = nn.LSTM(input_size=43 * 39, hidden_size=43 * 39, bidirectional=True, batch_first=True)
+        self.layer = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(43 * 39 * 2, 43 * 39)
+        )
+
         # 第一层卷积
         self.conv1 = nn.Sequential(
-            # 输入[5,43,39]
             nn.Conv2d(  # 定义1个2维的卷积核
-                in_channels=5,  # 输入通道的个数（单个case预报的月份个数）
+                in_channels=1,  # 输入通道的个数（单个case预报的月份个数）
                 out_channels=16,  # 输出通道（卷积核）的个数（越多则能识别更多边缘特征，任务不复杂赋值16，复杂可以赋值64）
                 kernel_size=(3, 3),  # 卷积核的大小
                 stride=(1, 1),  # 卷积核在图上滑动，每隔一个扫描的次数
                 padding=1,  # 周围填上多少圈的0, 一般为(kernel_size-1)/2
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)  # 经过最大值池化 输出传入下一个卷积
-        )
+            # nn.MaxPool2d(kernel_size=2)  # 经过最大值池化 输出传入下一个卷积
 
-        # 第二层卷积
-        self.conv2 = nn.Sequential(
             nn.Conv2d(
                 in_channels=16,  # 输入个数与上层输出一致
                 out_channels=32,
@@ -37,11 +40,7 @@ class NN(nn.Module):
                 padding=1
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)  # 经过池化 输出传入输出层
-        )
 
-        # 第三层卷积
-        self.conv3 = nn.Sequential(
             nn.Conv2d(
                 in_channels=32,  # 输入个数与上层输出一致
                 out_channels=64,
@@ -50,49 +49,47 @@ class NN(nn.Module):
                 padding=1
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)  # 经过池化 输出传入输出层
         )
 
-        # 输出层（全连接）
-        # self.output = nn.Linear(in_features=, out_features=1)
-
-        # BiLSTM
-        self.lstm = nn.LSTM(input_size=64 * 5 * 4, hidden_size=5, bidirectional=True)
-        # 全连接
-        self.fc = nn.Linear(5 * 2, 1)
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=64,  # 输入个数与上层输出一致
+                out_channels=5,
+                kernel_size=(3, 3),
+                stride=(1, 1),
+                padding=1
+            ),
+        )
 
     def attention_net(self, lstm_output, final_state):
-        # batch_size = len(lstm_output)
-        # hidden = final_state.view(batch_size, -1, 1)  # hidden : [batch_size, n_hidden * num_directions(=2), n_layer(=1)]
         hidden = torch.cat((final_state[0], final_state[1]), dim=1).unsqueeze(2)
         attn_weights = torch.bmm(lstm_output, hidden).squeeze(2)  # attn_weights : [batch_size, n_step]
         soft_attn_weights = F.softmax(attn_weights, 1)
         # context : [batch_size, n_hidden * num_directions(=2)]
         context = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
+
         return context, soft_attn_weights
 
     def forward(self, x):
+        x = x.flatten(-2, -1)
+        x, (final_hidden_state, final_cell_state) = self.lstm(x)
+        x, attention = self.attention_net(x, final_hidden_state)
+        # x = x.transpose(0, 1)
+        x = self.layer(x)
+        x = x.unflatten(-1, (43, 39))
+        x = x[:, None]
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.conv3(x)  # [batch, 64,5,4]
-        x = x.view(x.size(0), -1)  # 将多维展为1维 [batch, 1280]
-        x = x.unsqueeze(1)
-        x = x.transpose(0, 1)
-        # x = self.output(x)
-        # x = x.transpose(0, 1)
-        x, (final_hidden_state, final_cell_state) = self.lstm(x)
-        x = x.transpose(0, 1)
-        # x = self.attention(x)
-        x, attention = self.attention_net(x, final_hidden_state)
-        output = self.fc(x)
-        return output
+        return x
 
 
 class TrainDataset(Dataset):
     def __init__(self):
         super().__init__()
-        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA))
-        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS))
+        self.case_data = torch.Tensor(
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA))
+        self.obs_data = torch.Tensor(
+            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS))
         # self.len = self.case_data.shape
 
     def __getitem__(self, index):
@@ -101,17 +98,21 @@ class TrainDataset(Dataset):
     def __len__(self):
         return self.case_data.shape[0]
 
+
 class TestDataset(Dataset):
     def __init__(self):
         super().__init__()
-        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
-        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS))
+        self.case_data = torch.Tensor(
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
+        self.obs_data = torch.Tensor(
+            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS))
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
 
     def __len__(self):
         return self.case_data.shape[0]
+
 
 def train():
     for epoch in range(EPOCH):
@@ -125,6 +126,7 @@ def train():
             print(epoch, i, loss.item())
             loss.backward()
             optimizer.step()
+
 
 # def test():
 #     correct = 0
@@ -163,7 +165,8 @@ train_dataloader = DataLoader(dataset=train_dataset)
 test_dataset = TestDataset()
 test_dataloader = DataLoader(dataset=test_dataset)
 
-
 if __name__ == '__main__':
-
     train()
+    # data = torch.rand((20, 5, 43, 39))
+    # output = model(data)
+    # print(output.shape)
