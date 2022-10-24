@@ -128,7 +128,7 @@ def loop_train():
         plt.plot(test_case, color='blue')
         plt.plot(corr_case, color='orange')
         plt.plot(test_obs, color="black")
-        plt.show()
+        # plt.show()
         plt.close()
 
         # 绘制数据分布直方图
@@ -149,8 +149,7 @@ def loop_train():
     # TCC相关
     corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)
     case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)
-    PaintUtils.paint_TCC(corr_tcc, "Corr-TCC").show()
-    PaintUtils.paint_TCC(case_tcc, "Case-TCC").show()
+    PaintUtils.paint_TCC(case_tcc, corr_tcc).show()
 
     # ACC相关
     part_obses, remove = ObsParser.get_many_pravg(r"../divide area/divided obs", 1996, 2019, "JSJ", 4)

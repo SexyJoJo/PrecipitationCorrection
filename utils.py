@@ -66,8 +66,10 @@ class CaseParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None):
         stime = datetime(year=syear, month=1, day=1)
+        if jump_year:
+            jump_year = datetime(year=jump_year, month=1, day=1)
         etime = datetime(year=eyear + 1, month=1, day=1)
 
         pravgs = []
@@ -75,6 +77,8 @@ class CaseParser:
             for i, file in enumerate(files):
                 if file.startswith(area):
                     filetime = CaseParser.get_filetime(file)
+                    if jump_year and jump_year <= filetime <= jump_year + relativedelta(years=1):
+                        continue
                     if stime <= filetime <= etime:
                         pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
                         pravgs.append(pravg)
@@ -155,7 +159,7 @@ class ObsParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -163,10 +167,13 @@ class ObsParser:
         :param eyear: 结束年份
         :param area: 区域名称
         :param months: 提取月份
-        :return: 一维合并的PRAVG数组
+        :param jump_year: 忽略的年份
+        :return: 二维PRAVG数组
         """
         pravgs = []
         for year in range(syear, eyear+1):
+            if year == jump_year:
+                continue
             curr_year_pravg = []
             for month in months:
                 month = "0"+str(month) if len(str(month)) == 1 else str(month)
@@ -289,6 +296,10 @@ class OtherUtils:
         two_d = d.reshape(int(len(d) / length), length)
         return two_d
 
+    @staticmethod
+    def mse(y1, y2):
+        return (np.square(y1 - y2)).mean()
+
 
 class PaintUtils:
     @staticmethod
@@ -303,14 +314,17 @@ class PaintUtils:
         plt.ylim(-1, 1)
         case_line, = plt.plot(list(xrange), case_acc, linestyle='-', color='k', marker='^', markersize=7)
         corr_case_line, = plt.plot(list(xrange), corr_case_acc, linestyle='-', color='r', marker='.', markersize=7)
-        plt.legend(handles=[case_line, corr_case_line], labels=["CASE回报", "单变量订正"], loc="lower right")
+        plt.legend(handles=[case_line, corr_case_line], labels=["CASE回报", "订正后CASE"], loc="lower right")
         return plt
 
     @staticmethod
-    def paint_TCC(tcc, label=None):
-        avg = np.mean(tcc)
-        plt.axhline(y=avg, color='b', linestyle=':')
-        plt.plot(tcc, label=label)
+    def paint_TCC(case_tcc, corr_tcc):
+        case_avg = np.mean(case_tcc)
+        corr_avg = np.mean(corr_tcc)
+        plt.axhline(y=case_avg, color='b', linestyle=':')
+        plt.axhline(y=corr_avg, color='orange', linestyle=':')
+        plt.plot(case_tcc, color='b', label="case_tcc")
+        plt.plot(corr_tcc, color='orange', label="corr_tcc")
         plt.legend()
         return plt
 

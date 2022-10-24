@@ -1,4 +1,7 @@
 """CNN + BiLSTM + Attention"""
+import random
+from datetime import datetime
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -87,9 +90,9 @@ class TrainDataset(Dataset):
     def __init__(self):
         super().__init__()
         self.case_data = torch.Tensor(
-            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA))
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
         self.obs_data = torch.Tensor(
-            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS))
+            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR))
         # self.len = self.case_data.shape
 
     def __getitem__(self, index):
@@ -99,19 +102,12 @@ class TrainDataset(Dataset):
         return self.case_data.shape[0]
 
 
-class TestDataset(Dataset):
-    def __init__(self):
-        super().__init__()
-        self.case_data = torch.Tensor(
-            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
-        self.obs_data = torch.Tensor(
-            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS))
-
-    def __getitem__(self, index):
-        return self.case_data[index], self.obs_data[index]
-
-    def __len__(self):
-        return self.case_data.shape[0]
+def setup_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 def train():
@@ -123,50 +119,44 @@ def train():
 
             outputs = model(inputs)
             loss = criterion(outputs, target)
-            print(epoch, i, loss.item())
+            print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}")
             loss.backward()
             optimizer.step()
 
 
-# def test():
-#     correct = 0
-#     total = 0
-#     with torch.no_grad():
-#         for data in test_dataloader:
-#             images, labels = data
-#             images, labels = images.to(device), labels.to(device)
-#             outputs = model(images)
-#             _, predicted = torch.max(outputs.data, dim=1)
-#             total += labels.size(0)
-#             correct += (predicted == labels).sum().item()
-#     print('accuracy on test set: %d %% ' % (100*correct/total))
-#     return correct/total
-
-
-# 测试模型代码
-# def test_model():
-#     input = torch.ones((5, 6, 43, 39))  # 5个图片， 6个通道
-#     model = NN()
-#     output = model(input)
-#     print(output)
-#     test_input = torch.ones(1, )
-
-
-model = NN()
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-
-criterion = torch.nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-
-# 加载数据集
-train_dataset = TrainDataset()
-train_dataloader = DataLoader(dataset=train_dataset)
-test_dataset = TestDataset()
-test_dataloader = DataLoader(dataset=test_dataset)
+# model = NN()
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model.to(device)
+#
+# criterion = torch.nn.MSELoss()
+# optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+#
+# # 加载数据集
+# train_dataset = TrainDataset()
+# train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
 
 if __name__ == '__main__':
-    train()
+    # 加载数据集
+    setup_seed(20)
+    for TEST_YEAH in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
+        # init
+        model = NN()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        criterion = torch.nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+        train_dataset = TrainDataset()
+        train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
+
+        print(f"开始训练1991-2019年模型({TEST_YEAH}年除外)")
+        start = datetime.now()
+        train()
+        end = datetime.now()
+        print("模型训练完成,耗时:", end - start)
+        model_path = rf"./models/{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
+        torch.save(model.state_dict(), model_path)
+        print("保存模型文件:", model_path)
+
     # data = torch.rand((20, 5, 43, 39))
     # output = model(data)
     # print(output.shape)
