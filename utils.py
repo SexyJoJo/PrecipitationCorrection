@@ -200,6 +200,24 @@ class ObsParser:
             x[ir[0], ir[1]] = x[p[0], p[1]]
         return x
 
+    @staticmethod
+    def get_na_index(nc_dir, area):
+        """
+        获得obs缺失格点的坐标索引
+        :return: 格点列表
+        """
+        for root, _, files in os.walk(nc_dir):
+            for file in files:
+                if file.startswith(area):
+                    na_list = []
+                    nc_path = os.path.join(root, file)
+                    obs = netCDF4.Dataset(nc_path)
+                    pravg = obs.variables["prec"][:] / 30
+                    for i in range(len(pravg)):
+                        for j in range(len(pravg[i])):
+                            if isinstance(pravg[i][j], np.ma.core.MaskedConstant):
+                                na_list.append((i, j))
+                    return na_list
 
     @staticmethod
     def get_filetime(filename):
@@ -230,15 +248,15 @@ class OtherUtils:
         计算时间相关系数TCC
         :param predicts: 预测值， 维度：[年份， 预测值]
         :param obses: 对应预测值的观测值， 维度：[年份， 观测值]
-        :return: TCC(一个格点对应一个值)
+        :return: TCC(二维 一个格点对应一个值)
         """
         avg_pre = np.mean(predicts, axis=0)
         avg_obs = np.mean(obses, axis=0)
 
         # TCC公式分子
-        molecular = np.zeros([len(predicts[0])])
+        molecular = np.zeros(predicts[0].shape)
         # 分母左半边， 分母右半边
-        denominator_left, denominator_right = np.zeros([len(predicts[0])]), np.zeros([len(predicts[0])])
+        denominator_left, denominator_right = np.zeros(predicts[0].shape), np.zeros(predicts[0].shape)
 
         for i in range(len(predicts)):
             molecular += (predicts[i] - avg_pre) * (obses[i] - avg_obs)
@@ -254,27 +272,30 @@ class OtherUtils:
         计算距平相关系数ACC
         :param corr_cases: 所有年份的订正结果
         :param test_obses: 所有年份订正结果对应的观测值
-        :return: ACC列表（每个年份对应一个值）
+        :return: ACC列表（一维 每个年份对应一个值）
         """
+        corr_cases = np.array(corr_cases)
+        test_obses = np.array(test_obses)
+
         deltaRfs, deltaRos = [], []
         for i in range(len(corr_cases)):
-            deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)
+            deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
             deltaRfs.append(deltaRf)
-            deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)
+            deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)  # obs的距平百分率
             deltaRos.append(deltaRo)
 
-        deltaRfs = ma.masked_array(deltaRfs)
+        deltaRfs = np.array(deltaRfs)
         avg_deltaRf = np.mean(deltaRfs, axis=0)
-        deltaRos = ma.masked_array(deltaRos)
+        deltaRos = np.array(deltaRos)
         avg_deltaRo = np.mean(deltaRos, axis=0)
 
         # i对应各预测年份
         ACCs = []
         for i in range(len(corr_cases)):
             # ACC公式分子
-            molecular = np.sum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
-            denominator_left = np.sum(np.square(deltaRfs[i] - avg_deltaRf))
-            denominator_right = np.sum(np.square(deltaRos[i] - avg_deltaRo))
+            molecular = np.nansum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
+            denominator_left = np.nansum(np.square(deltaRfs[i] - avg_deltaRf))
+            denominator_right = np.nansum(np.square(deltaRos[i] - avg_deltaRo))
             ACC = molecular / np.sqrt(denominator_left * denominator_right)
             ACCs.append(ACC)
         return ACCs
@@ -287,9 +308,10 @@ class OtherUtils:
         :param all_pre: 全部年的预测值
         :return: 距平百分率
         """
-        all_pre = ma.masked_array(all_pre)
+        all_pre = np.array(all_pre)
         avg_pre = np.mean(all_pre, axis=0)
-        return (pre - avg_pre) / avg_pre
+        result = (pre - avg_pre) / avg_pre
+        return result
 
     @staticmethod
     def d_2_2d(d, length):
@@ -313,19 +335,27 @@ class PaintUtils:
         """
         plt.ylim(-1, 1)
         case_line, = plt.plot(list(xrange), case_acc, linestyle='-', color='k', marker='^', markersize=7)
+        case_avg = np.mean(case_acc)
+        plt.axhline(y=case_avg, color='k', linestyle=':')
+
         corr_case_line, = plt.plot(list(xrange), corr_case_acc, linestyle='-', color='r', marker='.', markersize=7)
+        corr_case_avg = np.mean(corr_case_acc)
+        plt.axhline(y=corr_case_avg, color='r', linestyle=':')
+
         plt.legend(handles=[case_line, corr_case_line], labels=["CASE回报", "订正后CASE"], loc="lower right")
         return plt
 
     @staticmethod
     def paint_TCC(case_tcc, corr_tcc):
-        case_avg = np.mean(case_tcc)
-        corr_avg = np.mean(corr_tcc)
-        plt.axhline(y=case_avg, color='b', linestyle=':')
-        plt.axhline(y=corr_avg, color='orange', linestyle=':')
-        plt.plot(case_tcc, color='b', label="case_tcc")
-        plt.plot(corr_tcc, color='orange', label="corr_tcc")
-        plt.legend()
+        plt.rcParams['font.family'] = ['SimHei']
+        fig = plt.figure(figsize=(7, 4))
+        ax1 = fig.add_subplot(1, 2, 1)
+        ax2 = fig.add_subplot(1, 2, 2)
+        ax1.set_title("订正前TCC")
+        sub_fig1 = ax1.imshow(case_tcc, cmap='Reds')
+        ax2.set_title("订正后TCC")
+        ax2.imshow(corr_tcc, cmap='Reds')
+        fig.colorbar(sub_fig1, ax=[ax1, ax2], orientation="horizontal")
         return plt
 
     @staticmethod

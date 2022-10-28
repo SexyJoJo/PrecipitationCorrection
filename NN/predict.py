@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from NN_CONST import *
 from utils import OtherUtils, PaintUtils
@@ -39,14 +40,27 @@ def test():
                 inputs, labels = data
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
+
+                # 去除obs中的缺失格点
+                # na_list = utils.ObsParser.get_na_index(OBS_DIR, AREA)
+                # for i, j in na_list:
+                #     input
                 print(f"{TEST_YEAR}年")
                 print("订正前mse", utils.OtherUtils.mse(inputs, labels))
                 print("订正后mse", utils.OtherUtils.mse(outputs, labels))
 
-                for i in range(0, 1):
-                    test_cases.append(inputs[0][i].cpu().numpy())
-                    corr_cases.append(outputs[0][i].cpu().numpy())
-                    test_obses.append(labels[0][i].cpu().numpy())
+                na_list = utils.ObsParser.get_na_index(OBS_DIR, AREA)
+                for i in range(4, 5):
+                    test_case = inputs[0][i].cpu().numpy()
+                    corr_case = outputs[0][i].cpu().numpy()
+                    test_obs = labels[0][i].cpu().numpy()
+                    for a, b in na_list:
+                        test_case[a][b] = np.nan
+                        corr_case[a][b] = np.nan
+                        test_obs[a][b] = np.nan
+                    test_cases.append(test_case)
+                    corr_cases.append(corr_case)
+                    test_obses.append(test_obs)
 
                     plt.rcParams['font.family'] = ['SimHei']
                     fig = plt.figure()
@@ -67,18 +81,19 @@ def test():
                     plt.close()
 
     # TCC相关
-    corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)
-    case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)
+    corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)   # 订正后与真实值
+    case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)   # 订正前与真实值
     tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
-    tcc_img.savefig(f"./评价指标/TCC/91-19年4月 test")
+    # tcc_img.show()
+    tcc_img.savefig(f"./评价指标/TCC/91-19年{i+4}月")
     tcc_img.close()
 
     corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
     case_acc = OtherUtils.cal_ACC(test_cases, test_obses)
     acc_img = PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
-    acc_img.savefig(f"./评价指标/ACC/91-19年4月 test")
+    # acc_img.show()
+    acc_img.savefig(f"./评价指标/ACC/91-19年{i+4}月")
     acc_img.close()
-
 
 
 if __name__ == '__main__':
