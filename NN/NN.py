@@ -1,4 +1,4 @@
-"""CNN + BiLSTM + Attention"""
+"""模型搭建与训练"""
 import random
 from datetime import datetime
 
@@ -13,6 +13,7 @@ from NN_CONST import *
 
 
 class NN(nn.Module):
+    # 当前维度（43*39）针对金沙江流域， 其他流域需要更改维度
     def __init__(self):
         super(NN, self).__init__()
 
@@ -136,10 +137,10 @@ def train():
 # train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
 
 if __name__ == '__main__':
-    # 加载数据集
     setup_seed(20)
+    # 所有年份中选一年作为测试集，其他年份作为训练集，以不同的训练集循环训练多个模型
     for TEST_YEAH in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
-        # init
+        # 初始化模型与数据集
         model = NN()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
@@ -148,6 +149,7 @@ if __name__ == '__main__':
         train_dataset = TrainDataset()
         train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
 
+        # 开始训练
         print(f"开始训练1991-2019年模型({TEST_YEAH}年除外)")
         start = datetime.now()
         train()

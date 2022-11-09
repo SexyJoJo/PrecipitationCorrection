@@ -1,8 +1,8 @@
-CASE_DIR = r"D:\PythonProjects\PrecipitationCorrection\divide area\divided case"
-OBS_DIR = r"D:\PythonProjects\PrecipitationCorrection\divide area\divided obs"
+CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
+OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
-MONTHS = [4, 5, 6, 7, 8]
-AREA = "JSJ"
+MONTHS = [4, 5, 6, 7, 8]    # 预报月份
+AREA = "JSJ"    # 流域简称
 
 TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2019

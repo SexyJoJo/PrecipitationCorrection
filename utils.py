@@ -1,5 +1,7 @@
 import os
 from datetime import datetime, timedelta
+
+import matplotlib
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
@@ -54,9 +56,7 @@ class CaseParser:
         """
         提取单个case文件的某个月分的PRAVG值(二维格点)
         :param nc_path: nc文件路径
-        :param month_index: 提取PRAVG所用的的月份索引
-        :param remove_index: 需要删除的pravg格点索引
-        :return: 一维PRAVG数组
+        :return: 单个二维PRAVG数组
         """
         case = netCDF4.Dataset(nc_path)
         pravg = case.variables["PRAVG"][:]  # 转换单位为mm/day
@@ -67,6 +67,15 @@ class CaseParser:
 
     @staticmethod
     def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None):
+        """
+        提取多个case文件的某个月分的PRAVG值(三维数组)
+        :param jump_year: 跳过年份
+        :param area: 区域简称
+        :param eyear: 结束年份
+        :param syear: 起始年份
+        :param nc_dir: nc文件目录
+        :return: 多个二维PRAVG数组（三维数组）
+        """
         stime = datetime(year=syear, month=1, day=1)
         if jump_year:
             jump_year = datetime(year=jump_year, month=1, day=1)
@@ -277,6 +286,7 @@ class OtherUtils:
         corr_cases = np.array(corr_cases)
         test_obses = np.array(test_obses)
 
+        # 各个格点转为距平百分率
         deltaRfs, deltaRos = [], []
         for i in range(len(corr_cases)):
             deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
@@ -293,6 +303,9 @@ class OtherUtils:
         ACCs = []
         for i in range(len(corr_cases)):
             # ACC公式分子
+            avg_deltaRf = np.nanmean(deltaRfs[i])
+            avg_deltaRo = np.nanmean(deltaRos[i])
+
             molecular = np.nansum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
             denominator_left = np.nansum(np.square(deltaRfs[i] - avg_deltaRf))
             denominator_right = np.nansum(np.square(deltaRos[i] - avg_deltaRo))
@@ -348,13 +361,16 @@ class PaintUtils:
     @staticmethod
     def paint_TCC(case_tcc, corr_tcc):
         plt.rcParams['font.family'] = ['SimHei']
+        norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)    # 设置colorbar显示的最大最小值
+
         fig = plt.figure(figsize=(7, 4))
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
         ax1.set_title("订正前TCC")
-        sub_fig1 = ax1.imshow(case_tcc, cmap='Reds')
+        sub_fig1 = ax1.imshow(case_tcc, cmap='bwr', norm=norm)
         ax2.set_title("订正后TCC")
-        ax2.imshow(corr_tcc, cmap='Reds')
+        ax2.imshow(corr_tcc, cmap='bwr', norm=norm)
+
         fig.colorbar(sub_fig1, ax=[ax1, ax2], orientation="horizontal")
         return plt
 
