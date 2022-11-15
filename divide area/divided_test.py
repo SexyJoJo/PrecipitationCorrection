@@ -20,7 +20,7 @@ if __name__ == '__main__':
                 time = nc["time"][:]
                 print(time)
                 PRAVG = nc["PRAVG"][:]
-                print(time)
+                print(PRAVG.shape)
                 # times = []
                 # for ti, hour in enumerate(time):
                 #     print(get_time(hour))

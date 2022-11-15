@@ -155,7 +155,7 @@ if __name__ == '__main__':
         train()
         end = datetime.now()
         print("模型训练完成,耗时:", end - start)
-        model_path = rf"./models/{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
+        model_path = rf"./models/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 
