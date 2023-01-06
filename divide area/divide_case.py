@@ -3,9 +3,9 @@ import netCDF4
 
 
 if __name__ == '__main__':
-    # 修改数据路径与保存路径
+    # 在这里修改数据路径与保存路径
     data_path = r"E:\Data\PrecipitationCorrection\CASE\CASE1\TIME00"
-    save_path = r"./divided case"
+    save_path = r"./divided case/TIME00"
 
     for root, _, files in os.walk(data_path):
         for file in files:
