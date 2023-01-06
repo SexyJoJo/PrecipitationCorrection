@@ -7,6 +7,7 @@ import netCDF4
 import numpy as np
 import numpy.ma as ma
 from dateutil.relativedelta import relativedelta
+import torch
 
 
 class CaseParser:
@@ -59,7 +60,7 @@ class CaseParser:
         :return: 单个二维PRAVG数组
         """
         case = netCDF4.Dataset(nc_path)
-        pravg = case.variables["PRAVG"][:]  # 转换单位为mm/day
+        pravg = case.variables["PRAVG"][:] * 24 * 3600  # 转换单位为mm/day
         # if remove_index:
         #     for i in remove_index[::-1]:
         #         pravg = np.delete(pravg, i)
@@ -91,6 +92,9 @@ class CaseParser:
                     if stime <= filetime <= etime:
                         pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
                         pravgs.append(pravg)
+
+                        # TODO 数据增强
+                        # 像素点错位（8个方向）
         return np.array(pravgs)
 
     @staticmethod
@@ -335,6 +339,16 @@ class OtherUtils:
     def mse(y1, y2):
         return (np.square(y1 - y2)).mean()
 
+    @staticmethod
+    def min_max_normalization(tensor, tensor_min, tensor_max):
+        """MinMax归一化"""
+        return (tensor - tensor_min) / (tensor_max - tensor_min)
+
+    @staticmethod
+    def min_max_denormalization(tensor, tensor_min, tensor_max):
+        """MinMax反归一化"""
+        return (tensor_max - tensor_min) * tensor + tensor_min
+
 
 class PaintUtils:
     @staticmethod
@@ -367,9 +381,9 @@ class PaintUtils:
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
         ax1.set_title("订正前TCC")
-        sub_fig1 = ax1.imshow(case_tcc, cmap='bwr', norm=norm)
+        sub_fig1 = ax1.imshow(np.flip(case_tcc, axis=0), cmap='bwr', norm=norm)
         ax2.set_title("订正后TCC")
-        ax2.imshow(corr_tcc, cmap='bwr', norm=norm)
+        ax2.imshow(np.flip(corr_tcc, axis=0), cmap='bwr', norm=norm)
 
         fig.colorbar(sub_fig1, ax=[ax1, ax2], orientation="horizontal")
         return plt

@@ -1,4 +1,5 @@
 """模型搭建与训练"""
+import os.path
 import random
 from datetime import datetime
 
@@ -7,9 +8,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-
 import utils
 from NN_CONST import *
+
+
+# 路径初始化
+CASE_DIR = os.path.join(CASE_DIR, TIME, BASIN)
+OBS_DIR = os.path.join(OBS_DIR, BASIN)
 
 
 class NN(nn.Module):
@@ -94,6 +99,12 @@ class TrainDataset(Dataset):
             utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
         self.obs_data = torch.Tensor(
             utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR))
+        all_data = torch.cat([self.case_data, self.obs_data], 0)
+        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, torch.min(all_data), torch.max(all_data))
+        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, torch.min(all_data), torch.max(all_data))
+        print(torch.min(self.obs_data))
+        print(torch.max(self.obs_data))
+
         # self.len = self.case_data.shape
 
     def __getitem__(self, index):
@@ -155,7 +166,9 @@ if __name__ == '__main__':
         train()
         end = datetime.now()
         print("模型训练完成,耗时:", end - start)
-        model_path = rf"./models/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
+        if not os.path.exists(rf"./models/{TIME}/{BASIN}"):
+            os.makedirs(rf"./models/{TIME}/{BASIN}")
+        model_path = rf"./models/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 
