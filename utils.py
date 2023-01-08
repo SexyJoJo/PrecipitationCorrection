@@ -184,12 +184,12 @@ class ObsParser:
         :return: 二维PRAVG数组
         """
         pravgs = []
-        for year in range(syear, eyear+1):
+        for year in range(syear, eyear + 1):
             if year == jump_year:
                 continue
             curr_year_pravg = []
             for month in months:
-                month = "0"+str(month) if len(str(month)) == 1 else str(month)
+                month = "0" + str(month) if len(str(month)) == 1 else str(month)
                 filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"
                 pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                 curr_year_pravg.append(pravg)
@@ -349,6 +349,85 @@ class OtherUtils:
         """MinMax反归一化"""
         return (tensor_max - tensor_min) * tensor + tensor_min
 
+    @staticmethod
+    def data_enhance():
+        """二维矩阵向8个方位移动一格"""
+        tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+
+        # 矩阵上移一格
+        body = tensor[1:]
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        up_move = torch.cat([body, space], 0)
+        print(up_move)
+
+        # 矩阵右上移一格
+        body = tensor[1:]
+        body = body.cpu().numpy()
+        body = np.delete(body, -1, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        up_right_move = torch.cat([body, space], 0)
+        space = torch.zeros(up_right_move.shape[0]).unsqueeze(1)
+        up_right_move = torch.cat([space, up_right_move], 1)
+        print(up_right_move)
+
+        # 矩阵右移一格
+        body = tensor
+        body = body.cpu().numpy()
+        body = np.delete(body, -1, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[0]).unsqueeze(1)
+        right_move = torch.cat([space, body], 1)
+        print(right_move)
+
+        # 矩阵右下移一格
+        body = tensor[:-1]
+        body = body.cpu().numpy()
+        body = np.delete(body, -1, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        down_right_move = torch.cat([space, body], 0)
+        space = torch.zeros(down_right_move.shape[0]).unsqueeze(1)
+        down_right_move = torch.cat([space, down_right_move], 1)
+        print(down_right_move)
+
+        # 矩阵下移一格
+        body = tensor[:-1]
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        down_move = torch.cat([space, body], 0)
+        print(down_move)
+
+        # 矩阵左下移一格
+        body = tensor[:-1]
+        body = body.cpu().numpy()
+        body = np.delete(body, 0, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        down_left_move = torch.cat([space, body], 0)
+        space = torch.zeros(down_left_move.shape[0]).unsqueeze(1)
+        down_left_move = torch.cat([down_left_move, space], 1)
+        print(down_left_move)
+
+        # 矩阵左移一格
+        body = tensor
+        body = body.cpu().numpy()
+        body = np.delete(body, 0, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[0]).unsqueeze(1)
+        left_move = torch.cat([body, space], 1)
+        print(left_move)
+
+        # 矩阵左上移一格
+        body = tensor[1:]
+        body = body.cpu().numpy()
+        body = np.delete(body, 0, axis=1)
+        body = torch.tensor(body)
+        space = torch.zeros(body.shape[1]).unsqueeze(0)
+        up_left_move = torch.cat([body, space], 0)
+        space = torch.zeros(up_left_move.shape[0]).unsqueeze(1)
+        up_left_move = torch.cat([up_left_move, space], 1)
+        print(up_left_move)
+
 
 class PaintUtils:
     @staticmethod
@@ -375,7 +454,7 @@ class PaintUtils:
     @staticmethod
     def paint_TCC(case_tcc, corr_tcc):
         plt.rcParams['font.family'] = ['SimHei']
-        norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)    # 设置colorbar显示的最大最小值
+        norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)  # 设置colorbar显示的最大最小值
 
         fig = plt.figure(figsize=(7, 4))
         ax1 = fig.add_subplot(1, 2, 1)
@@ -418,3 +497,6 @@ class PaintUtils:
         plt.close()
         # plt.legend(loc='lower right')
         return plt
+
+
+OtherUtils.data_enhance()
