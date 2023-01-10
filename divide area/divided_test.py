@@ -13,7 +13,7 @@ def get_time(delta):
 if __name__ == '__main__':
     for root, _, files in os.walk(r"divided case"):
         for file in files:
-            if file.endswith("monthly.nc") and file.startswith("CJZXY"):
+            if file.endswith("monthly.nc") and file.startswith("JSJ"):
                 path = os.path.join(root, file)
                 print(file)
                 nc = netCDF4.Dataset(path)
