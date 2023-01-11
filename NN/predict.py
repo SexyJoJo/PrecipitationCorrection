@@ -12,8 +12,11 @@ import matplotlib.colors
 
 
 # 路径初始化
-CASE_DIR = os.path.join(CASE_DIR, TIME, BASIN)
+CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
+SHAPE = torch.Tensor(
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)).shape
+MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 
 
 class TestDataset(Dataset):
@@ -38,7 +41,7 @@ def test():
         for TEST_YEAR in range(1991, 2020):
             # 读取模型
             model = NN()
-            model.load_state_dict(torch.load(f"./models/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
+            model.load_state_dict(torch.load(f"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
             # 取训练集中的最值用于反归一化
@@ -88,7 +91,7 @@ def test():
 
                     plt.rcParams['font.family'] = ['SimHei']
                     fig = plt.figure()
-                    fig.suptitle(f"{TIME}-{BASIN}-{AREA}-{TEST_YEAR}年{i+4}月")
+                    fig.suptitle(f"{TIME}-{BASIN}-{AREA}-{TEST_YEAR}年{MONTHS[i]}月")
                     ax1 = fig.add_subplot(1, 3, 1)
                     ax2 = fig.add_subplot(1, 3, 2)
                     ax3 = fig.add_subplot(1, 3, 3)
@@ -105,29 +108,29 @@ def test():
 
                     plt.colorbar(subfig, ax=[ax1, ax2, ax3], orientation="horizontal")
 
-                    if not os.path.exists(rf"./results/{TIME}/{BASIN}/{AREA}"):
-                        os.makedirs(rf"./results/{TIME}/{BASIN}/{AREA}")
-                    plt.savefig(f"./results/{TIME}/{BASIN}/{AREA}/{TEST_YEAR}年{i+4}月")
+                    if not os.path.exists(rf"./results/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}"):
+                        os.makedirs(rf"./results/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}")
+                    plt.savefig(f"./results/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}/{TEST_YEAR}年{MONTHS[i]}月")
                     plt.close()
 
         # TCC相关
         corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)   # 订正后与真实值
         case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)   # 订正前与真实值
         tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
-        if not os.path.exists(rf"./评价指标/TCC/{TIME}/{BASIN}"):
-            os.makedirs(rf"./评价指标/TCC/{TIME}/{BASIN}")
-        tcc_img.savefig(rf"./评价指标/TCC/{TIME}/{BASIN}/{AREA}_91-19年{i+4}月")
-        print("tcc已保存", rf"./评价指标/TCC/{TIME}/{BASIN}/{AREA}_91-19年{i+4}月")
+        if not os.path.exists(rf"./评价指标/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
+            os.makedirs(rf"./评价指标/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
+        tcc_img.savefig(rf"./评价指标/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[i]}月")
+        print("tcc已保存", rf"./评价指标/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[i]}月")
         tcc_img.close()
 
         # ACC相关
         corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
         case_acc = OtherUtils.cal_ACC(test_cases, test_obses)
         acc_img = PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
-        if not os.path.exists(rf"./评价指标/ACC/{TIME}/{BASIN}"):
-            os.makedirs(rf"./评价指标/ACC/{TIME}/{BASIN}")
-        acc_img.savefig(f"./评价指标/ACC/{TIME}/{BASIN}/{AREA}_91-19年{i+4}月")
-        print("tcc已保存", rf"./评价指标/ACC/{TIME}/{BASIN}/{AREA}_91-19年{i+4}月")
+        if not os.path.exists(rf"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
+            os.makedirs(rf"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
+        acc_img.savefig(f"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[i]}月")
+        print("tcc已保存", rf"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[i]}月")
         acc_img.close()
 
 

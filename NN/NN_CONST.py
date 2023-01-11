@@ -2,11 +2,11 @@
 CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
-# 预报时次
-TIME = "TIME12"
+DATE = "0131"  # 预报日期
+CASE_NUM = "CASE1"  # CASE编号
+TIME = "TIME00"  # 预报时次
 
-# 预报月份 0302往后5个月
-MONTHS = [4, 5, 6, 7, 8]
+# 预报月份 预报日期往后5个月
 
 # 流域名称 ['ChangJiang', 'HuangHe', 'HeHai']
 BASIN = 'ChangJiang'

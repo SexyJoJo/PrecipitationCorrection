@@ -188,11 +188,40 @@ class ObsParser:
             if year == jump_year:
                 continue
             curr_year_pravg = []
-            for month in months:
-                month = "0" + str(month) if len(str(month)) == 1 else str(month)
-                filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"
-                pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
-                curr_year_pravg.append(pravg)
+
+            # 判断月份列表是否存在跨年的情况
+            if months == sorted(months[:]):
+                is_sorted = True
+            else:
+                is_sorted = False
+
+            # 若case为12月
+            if months[0] == 1:
+                for month in months:
+                    month = "0" + str(month) if len(str(month)) == 1 else str(month)
+                    filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    curr_year_pravg.append(pravg)
+            # 若case不为12月且月份列表顺序
+            elif is_sorted and months[0] != 1:
+                for month in months:
+                    month = "0" + str(month) if len(str(month)) == 1 else str(month)
+                    filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    curr_year_pravg.append(pravg)
+            # 若月份列表非顺序
+            elif not is_sorted:
+                split_point = months.index(12)
+                for i, month in enumerate(months):
+                    month = "0" + str(month) if len(str(month)) == 1 else str(month)
+                    if i <= split_point:
+                        filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                    else:
+                        filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    curr_year_pravg.append(pravg)
+
             pravgs.append(curr_year_pravg)
         return np.array(pravgs)
         # return ma.masked_array(pravgs)
@@ -249,6 +278,25 @@ class ObsParser:
 
 
 class OtherUtils:
+    @staticmethod
+    def get_predict_months(case_date, month_cnt):
+        """
+        获取需要预测月份的列表
+        :param case_date: case数据起始日期
+        :param month_cnt: 待预测月份个数
+        :return: 待预测月份列表
+        """
+        start_month = int(case_date[:2])
+        months = []
+        for cnt in range(month_cnt):
+            months.append((start_month + cnt + 1) % 13)
+
+        if 0 in months:
+            idx = months.index(0)
+            months.append(months[-1] + 1)
+            months.pop(idx)
+        return months
+
     @staticmethod
     def trans_time(nc_time):
         start = datetime(1900, 1, 1)
@@ -498,5 +546,3 @@ class PaintUtils:
         # plt.legend(loc='lower right')
         return plt
 
-
-OtherUtils.data_enhance()
