@@ -2,7 +2,7 @@
 CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
-DATE = "0131"  # 预报日期
+DATE = "0302"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
 
@@ -18,7 +18,7 @@ AREA = "JSJ"
 # 数据集划分参数
 TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2019
-JUMP_YEAR = 2019
+# JUMP_YEAR = 2019
 
 # 训练参数
 EPOCH = 2000

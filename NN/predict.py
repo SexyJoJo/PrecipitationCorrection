@@ -15,7 +15,7 @@ import matplotlib.colors
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
 SHAPE = torch.Tensor(
-            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)).shape
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)).shape
 MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 
 
@@ -46,9 +46,9 @@ def test():
 
             # 取训练集中的最值用于反归一化
             train_case_data = torch.Tensor(
-                utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
+                utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, TEST_YEAR))
             train_obs_data = torch.Tensor(
-                utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR))
+                utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, TEST_YEAR))
             all_train_data = torch.cat([train_case_data, train_obs_data], 0)
             tensor_min = torch.min(all_train_data)
             tensor_max = torch.max(all_train_data)

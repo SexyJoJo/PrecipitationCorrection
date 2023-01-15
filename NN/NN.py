@@ -15,7 +15,7 @@ from NN_CONST import *
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
 SHAPE = torch.Tensor(
-    utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)).shape
+    utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)).shape
 MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 
 
@@ -100,7 +100,7 @@ class NN(nn.Module):
 
 
 class TrainDataset(Dataset):
-    def __init__(self):
+    def __init__(self, JUMP_YEAR):
         super().__init__()
         self.case_data = torch.Tensor(
             utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
@@ -130,15 +130,17 @@ def setup_seed(seed):
 
 def train():
     for epoch in range(EPOCH):
+        total_traing_loss = 0.
         for i, data in enumerate(train_dataloader, 0):
             inputs, target = data
             inputs, target = inputs.to(device), target.to(device)
             optimizer.zero_grad()
 
             outputs = model(inputs)
-            loss = criterion(outputs, target)
-            print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}")
-            loss.backward()
+            training_loss = criterion(outputs, target)
+            total_traing_loss += training_loss.item()
+            print(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  total_training_loss:{total_traing_loss}")
+            training_loss.backward()
             optimizer.step()
 
 
@@ -163,7 +165,7 @@ if __name__ == '__main__':
         model.to(device)
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-        train_dataset = TrainDataset()
+        train_dataset = TrainDataset(TEST_YEAH)
         train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
 
         # 开始训练
