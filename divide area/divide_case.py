@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 JSJ_nc.createVariable('XLAT', "f", ("x", "y"))
                 JSJ_nc.createVariable('PRAVG', "f", ("time", "x", "y"))
                 JSJ_nc.variables["XLONG"][:] = JSJ_XLONG
-                JSJ_nc.variables["XLAT"][:] = JSJ_XLONG
+                JSJ_nc.variables["XLAT"][:] = JSJ_XLAT
                 JSJ_nc.variables["time"][:] = time
                 JSJ_nc.variables["PRAVG"][:] = JSJ_PRAVG
 
