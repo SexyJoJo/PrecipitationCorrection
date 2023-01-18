@@ -328,29 +328,33 @@ class OtherUtils:
         return TCC
 
     @staticmethod
-    def cal_ACC(corr_cases, test_obses):
+    def cal_ACC(corr_cases, test_obses, use_anomaly=True):
         """
         计算距平相关系数ACC
         :param corr_cases: 所有年份的订正结果
         :param test_obses: 所有年份订正结果对应的观测值
+        :param use_anomaly: 是否使用距平百分率，默认使用
         :return: ACC列表（一维 每个年份对应一个值）
         """
         corr_cases = np.array(corr_cases)
         test_obses = np.array(test_obses)
 
-        # 各个格点转为距平百分率
-        deltaRfs, deltaRos = [], []
-        for i in range(len(corr_cases)):
-            deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
-            deltaRfs.append(deltaRf)
-            deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)  # obs的距平百分率
-            deltaRos.append(deltaRo)
+        if use_anomaly:
+            # 各个格点转为距平百分率
+            deltaRfs, deltaRos = [], []
+            for i in range(len(corr_cases)):
+                deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
+                deltaRfs.append(deltaRf)
+                deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)  # obs的距平百分率
+                deltaRos.append(deltaRo)
 
-        deltaRfs = np.array(deltaRfs)
-        avg_deltaRf = np.mean(deltaRfs, axis=0)
-        deltaRos = np.array(deltaRos)
-        avg_deltaRo = np.mean(deltaRos, axis=0)
-
+            deltaRfs = np.array(deltaRfs)
+            avg_deltaRf = np.mean(deltaRfs, axis=0)
+            deltaRos = np.array(deltaRos)
+            avg_deltaRo = np.mean(deltaRos, axis=0)
+        else:
+            deltaRfs = corr_cases
+            deltaRos = test_obses
         # i对应各预测年份
         ACCs = []
         for i in range(len(corr_cases)):

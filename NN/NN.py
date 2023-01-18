@@ -2,7 +2,9 @@
 import os.path
 import random
 from datetime import datetime
+import logging
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,6 +12,9 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import utils
 from NN_CONST import *
+
+# 日志初始化
+logging.basicConfig(filename='./log.txt', level=logging.DEBUG, format='%(asctime)s  %(message)s')
 
 # 路径初始化
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
@@ -99,6 +104,21 @@ class NN(nn.Module):
         return x
 
 
+class TestDataset(Dataset):
+    def __init__(self, TEST_START_YEAR, TEST_END_YEAR):
+        super().__init__()
+        self.case_data = torch.Tensor(
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
+        self.obs_data = torch.Tensor(
+            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS))
+
+    def __getitem__(self, index):
+        return self.case_data[index], self.obs_data[index]
+
+    def __len__(self):
+        return self.case_data.shape[0]
+
+
 class TrainDataset(Dataset):
     def __init__(self, JUMP_YEAR):
         super().__init__()
@@ -129,54 +149,91 @@ def setup_seed(seed):
 
 
 def train():
+    total_training_loss_list = []   # 用于绘制损失趋势图
+    # total_test_loss_list = []
+
     for epoch in range(EPOCH):
-        total_traing_loss = 0.
+        # 模型训练
+        total_training_loss = 0.
         for i, data in enumerate(train_dataloader, 0):
             inputs, target = data
             inputs, target = inputs.to(device), target.to(device)
             optimizer.zero_grad()
 
             outputs = model(inputs)
+
             training_loss = criterion(outputs, target)
-            total_traing_loss += training_loss.item()
-            print(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  total_training_loss:{total_traing_loss}")
+            total_training_loss += training_loss.item()
+            total_training_loss_list.append(total_training_loss)
+            print(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
+                  f"total_training_loss:{total_training_loss}")
+            logging.debug(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
+                          f"total_training_loss:{total_training_loss}")
             training_loss.backward()
             optimizer.step()
 
+        # # 模型验证
+        # total_test_loss = 0.
+        # with torch.no_grad():
+        #     for data in test_dataloader:
+        #         data[0] = utils.OtherUtils.min_max_normalization(data[0], tensor_min, tensor_max)
+        #         data[1] = utils.OtherUtils.min_max_normalization(data[1], tensor_min, tensor_max)
+        #         test_inputs, test_labels = data
+        #         test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
+        #         test_outputs = model(test_inputs)
+        #         test_loss = criterion(test_outputs, test_labels)
+        #         total_test_loss += test_loss.item()
+        #         total_test_loss_list.append(total_test_loss)
+        #         print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
+        #               f"total_testing_loss:{total_test_loss}")
+        #         logging.debug(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
+        #                       f"total_testing_loss:{total_test_loss}")
 
-# model = NN()
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model.to(device)
-#
-# criterion = torch.nn.MSELoss()
-# optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-#
-# # 加载数据集
-# train_dataset = TrainDataset()
-# train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
+    # # 绘制损失
+    # plt.plot(list(range(EPOCH)), total_training_loss_list, label="total training loss")
+    # plt.plot(list(range(EPOCH)), total_test_loss_list, label="total test loss")
+    # plt.ylim([0, 0.002])
+    # plt.legend()
+    # plt.show()
+    # plt.close()
+
 
 if __name__ == '__main__':
     setup_seed(20)
     # 所有年份中选一年作为测试集，其他年份作为训练集，以不同的训练集循环训练多个模型
-    for TEST_YEAH in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
+    for TEST_YEAR in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
         # 初始化模型与数据集
         model = NN()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-        train_dataset = TrainDataset(TEST_YEAH)
+        # 加载训练集
+        train_dataset = TrainDataset(TEST_YEAR)
         train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
+        # 加载测试集 用于查看损失
+        test_dataset = TestDataset(TEST_YEAR, TEST_YEAR)
+        test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
+        # 取训练集中的最值用于反归一化
+        train_case_data = torch.Tensor(
+            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, TEST_YEAR))
+        train_obs_data = torch.Tensor(
+            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, TEST_YEAR))
+        all_train_data = torch.cat([train_case_data, train_obs_data], 0)
+        tensor_min = torch.min(all_train_data)
+        tensor_max = torch.max(all_train_data)
 
         # 开始训练
-        print(f"开始训练1991-2019年模型({TEST_YEAH}年除外)")
+        logging.debug(f"开始训练1991-2019年模型({TEST_YEAR}年除外)")
+        print(f"开始训练1991-2019年模型({TEST_YEAR}年除外)")
         start = datetime.now()
         train()
         end = datetime.now()
+        logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
 
         os.makedirs(rf"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = rf"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAH}年).pth"
+        model_path = rf"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 

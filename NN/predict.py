@@ -124,8 +124,8 @@ def test():
         tcc_img.close()
 
         # ACC相关
-        corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
-        case_acc = OtherUtils.cal_ACC(test_cases, test_obses)
+        corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses, False)
+        case_acc = OtherUtils.cal_ACC(test_cases, test_obses, False)
         acc_img = PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
         if not os.path.exists(rf"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
             os.makedirs(rf"./评价指标/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
