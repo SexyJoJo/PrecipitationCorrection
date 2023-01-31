@@ -29,7 +29,7 @@ class NN(nn.Module):
     def __init__(self):
         super(NN, self).__init__()
 
-        # 输入[batch, 5,43,39]
+        # 输入[batch, 月份, 43, 39]
         self.lstm = nn.LSTM(
             input_size=SHAPE[2] * SHAPE[3],
             hidden_size=SHAPE[2] * SHAPE[3],
@@ -123,10 +123,13 @@ class TrainDataset(Dataset):
     def __init__(self, JUMP_YEAR):
         super().__init__()
         self.case_data = torch.Tensor(
-            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
-
+            utils.CaseParser.get_many_2d_pravg(
+                CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR, DATA_ENHANCE
+            ))
         self.obs_data = torch.Tensor(
-            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR))
+            utils.ObsParser.get_many_2d_pravg(
+                OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR, DATA_ENHANCE
+            ))
         all_data = torch.cat([self.case_data, self.obs_data], 0)
         self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, torch.min(all_data),
                                                                 torch.max(all_data))
@@ -232,8 +235,8 @@ if __name__ == '__main__':
         logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
 
-        os.makedirs(rf"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = rf"./models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
+        os.makedirs(rf"models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
+        model_path = rf"models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 

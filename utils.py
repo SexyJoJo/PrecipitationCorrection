@@ -67,7 +67,7 @@ class CaseParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False):
         """
         提取多个case文件的某个月分的PRAVG值(三维数组)
         :param jump_year: 跳过年份
@@ -75,6 +75,7 @@ class CaseParser:
         :param eyear: 结束年份
         :param syear: 起始年份
         :param nc_dir: nc文件目录
+        :param data_enhance: 是否启用数据增强
         :return: 多个二维PRAVG数组（三维数组）
         """
         stime = datetime(year=syear, month=1, day=1)
@@ -91,10 +92,15 @@ class CaseParser:
                         continue
                     if stime <= filetime <= etime:
                         pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
+                        if data_enhance:
+                            # 像素点错位（8个方向）
+                            pravg = OtherUtils.data_enhance(pravg)
                         pravgs.append(pravg)
-
-                        # TODO 数据增强
-                        # 像素点错位（8个方向）
+        if data_enhance:
+            # for i in range(len(pravgs)):
+            #     pravgs[i] = pravgs[i].unsqueeze(0)
+            results = torch.cat(pravgs, dim=0)
+            return results
         return np.array(pravgs)
 
     @staticmethod
@@ -172,7 +178,7 @@ class ObsParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -181,6 +187,7 @@ class ObsParser:
         :param area: 区域名称
         :param months: 提取月份
         :param jump_year: 忽略的年份
+        :param data_enhance: 是否启用数据增强
         :return: 二维PRAVG数组
         """
         pravgs = []
@@ -222,7 +229,11 @@ class ObsParser:
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
 
-            pravgs.append(curr_year_pravg)
+            if data_enhance:
+                for i in range(9):
+                    pravgs.append(curr_year_pravg)
+            else:
+                pravgs.append(curr_year_pravg)
         return np.array(pravgs)
         # return ma.masked_array(pravgs)
 
@@ -402,83 +413,140 @@ class OtherUtils:
         return (tensor_max - tensor_min) * tensor + tensor_min
 
     @staticmethod
-    def data_enhance():
-        """二维矩阵向8个方位移动一格"""
-        tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    def data_enhance(ori_tensor):
+        """每个二维矩阵向8个方位移动一格"""
+        ori_tensor = torch.Tensor(ori_tensor)
+        enhanced_tensor = []
+        up_tensor = []
+        up_right_tensor = []
+        right_tensor = []
+        down_right_tensor = []
+        down_tensor = []
+        down_left_tensor = []
+        left_tensor = []
+        up_left_tensor = []
 
-        # 矩阵上移一格
-        body = tensor[1:]
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_move = torch.cat([body, space], 0)
-        print(up_move)
+        for tensor in ori_tensor:
+            # 矩阵上移一格
+            body = tensor[1:]
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            up_move = torch.cat([body, space], 0)
+            up_tensor.append(up_move)
 
-        # 矩阵右上移一格
-        body = tensor[1:]
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_right_move = torch.cat([body, space], 0)
-        space = torch.zeros(up_right_move.shape[0]).unsqueeze(1)
-        up_right_move = torch.cat([space, up_right_move], 1)
-        print(up_right_move)
+            # 矩阵右上移一格
+            body = tensor[1:]
+            body = body.cpu().numpy()
+            body = np.delete(body, -1, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            up_right_move = torch.cat([body, space], 0)
+            space = torch.zeros(up_right_move.shape[0]).unsqueeze(1)
+            up_right_move = torch.cat([space, up_right_move], 1)
+            up_right_tensor.append(up_right_move)
 
-        # 矩阵右移一格
-        body = tensor
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[0]).unsqueeze(1)
-        right_move = torch.cat([space, body], 1)
-        print(right_move)
+            # 矩阵右移一格
+            body = tensor
+            body = body.cpu().numpy()
+            body = np.delete(body, -1, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[0]).unsqueeze(1)
+            right_move = torch.cat([space, body], 1)
+            right_tensor.append(right_move)
 
-        # 矩阵右下移一格
-        body = tensor[:-1]
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_right_move = torch.cat([space, body], 0)
-        space = torch.zeros(down_right_move.shape[0]).unsqueeze(1)
-        down_right_move = torch.cat([space, down_right_move], 1)
-        print(down_right_move)
+            # 矩阵右下移一格
+            body = tensor[:-1]
+            body = body.cpu().numpy()
+            body = np.delete(body, -1, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            down_right_move = torch.cat([space, body], 0)
+            space = torch.zeros(down_right_move.shape[0]).unsqueeze(1)
+            down_right_move = torch.cat([space, down_right_move], 1)
+            down_right_tensor.append(down_right_move)
 
-        # 矩阵下移一格
-        body = tensor[:-1]
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_move = torch.cat([space, body], 0)
-        print(down_move)
+            # 矩阵下移一格
+            body = tensor[:-1]
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            down_move = torch.cat([space, body], 0)
+            down_tensor.append(down_move)
 
-        # 矩阵左下移一格
-        body = tensor[:-1]
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_left_move = torch.cat([space, body], 0)
-        space = torch.zeros(down_left_move.shape[0]).unsqueeze(1)
-        down_left_move = torch.cat([down_left_move, space], 1)
-        print(down_left_move)
+            # 矩阵左下移一格
+            body = tensor[:-1]
+            body = body.cpu().numpy()
+            body = np.delete(body, 0, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            down_left_move = torch.cat([space, body], 0)
+            space = torch.zeros(down_left_move.shape[0]).unsqueeze(1)
+            down_left_move = torch.cat([down_left_move, space], 1)
+            down_left_tensor.append(down_left_move)
 
-        # 矩阵左移一格
-        body = tensor
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[0]).unsqueeze(1)
-        left_move = torch.cat([body, space], 1)
-        print(left_move)
+            # 矩阵左移一格
+            body = tensor
+            body = body.cpu().numpy()
+            body = np.delete(body, 0, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[0]).unsqueeze(1)
+            left_move = torch.cat([body, space], 1)
+            left_tensor.append(left_move)
 
-        # 矩阵左上移一格
-        body = tensor[1:]
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_left_move = torch.cat([body, space], 0)
-        space = torch.zeros(up_left_move.shape[0]).unsqueeze(1)
-        up_left_move = torch.cat([up_left_move, space], 1)
-        print(up_left_move)
+            # 矩阵左上移一格
+            body = tensor[1:]
+            body = body.cpu().numpy()
+            body = np.delete(body, 0, axis=1)
+            body = torch.tensor(body)
+            space = torch.zeros(body.shape[1]).unsqueeze(0)
+            up_left_move = torch.cat([body, space], 0)
+            space = torch.zeros(up_left_move.shape[0]).unsqueeze(1)
+            up_left_move = torch.cat([up_left_move, space], 1)
+            up_left_tensor.append(up_left_move)
+
+        for i in range(len(up_tensor)):
+            up_tensor[i] = up_tensor[i].unsqueeze(0)
+        up_tensor = torch.cat(up_tensor, dim=0)
+
+        for i in range(len(up_right_tensor)):
+            up_right_tensor[i] = up_right_tensor[i].unsqueeze(0)
+        up_right_tensor = torch.cat(up_right_tensor, dim=0)
+
+        for i in range(len(right_tensor)):
+            right_tensor[i] = right_tensor[i].unsqueeze(0)
+        right_tensor = torch.cat(right_tensor, dim=0)
+
+        for i in range(len(down_right_tensor)):
+            down_right_tensor[i] = down_right_tensor[i].unsqueeze(0)
+        down_right_tensor = torch.cat(down_right_tensor, dim=0)
+
+        for i in range(len(down_tensor)):
+            down_tensor[i] = down_tensor[i].unsqueeze(0)
+        down_tensor = torch.cat(down_tensor, dim=0)
+
+        for i in range(len(down_left_tensor)):
+            down_left_tensor[i] = down_left_tensor[i].unsqueeze(0)
+        down_left_tensor = torch.cat(down_left_tensor, dim=0)
+
+        for i in range(len(left_tensor)):
+            left_tensor[i] = left_tensor[i].unsqueeze(0)
+        left_tensor = torch.cat(left_tensor, dim=0)
+
+        for i in range(len(up_left_tensor)):
+            up_left_tensor[i] = up_left_tensor[i].unsqueeze(0)
+        up_left_tensor = torch.cat(up_left_tensor, dim=0)
+
+        enhanced_tensor.append(ori_tensor)
+        enhanced_tensor.append(up_tensor)
+        enhanced_tensor.append(up_right_tensor)
+        enhanced_tensor.append(right_tensor)
+        enhanced_tensor.append(down_right_tensor)
+        enhanced_tensor.append(down_tensor)
+        enhanced_tensor.append(down_left_tensor)
+        enhanced_tensor.append(left_tensor)
+        enhanced_tensor.append(up_left_tensor)
+
+        for i in range(len(enhanced_tensor)):
+            enhanced_tensor[i] = enhanced_tensor[i].unsqueeze(0)
+        enhanced_tensor = torch.cat(enhanced_tensor, dim=0)
+        return enhanced_tensor
 
 
 class PaintUtils:
