@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-
+# from NN.NN_CONST import *
 import matplotlib
 import matplotlib.pyplot as plt
 import netCDF4
@@ -67,7 +67,7 @@ class CaseParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
         """
         提取多个case文件的某个月分的PRAVG值(三维数组)
         :param jump_year: 跳过年份
@@ -76,6 +76,7 @@ class CaseParser:
         :param syear: 起始年份
         :param nc_dir: nc文件目录
         :param data_enhance: 是否启用数据增强
+        :param use_anomaly: 是否使用距平
         :return: 多个二维PRAVG数组（三维数组）
         """
         stime = datetime(year=syear, month=1, day=1)
@@ -96,12 +97,19 @@ class CaseParser:
                             # 像素点错位（8个方向）
                             pravg = OtherUtils.data_enhance(pravg)
                         pravgs.append(pravg)
+
+        results = np.array(pravgs)
+
         if data_enhance:
             # for i in range(len(pravgs)):
             #     pravgs[i] = pravgs[i].unsqueeze(0)
             results = torch.cat(pravgs, dim=0)
             return results
-        return np.array(pravgs)
+
+        if use_anomaly:
+            results = results - avg
+
+        return results
 
     @staticmethod
     def get_filetime(filename):
@@ -178,7 +186,7 @@ class ObsParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -206,14 +214,14 @@ class ObsParser:
             if months[0] == 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
-                    filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+                    filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
             # 若case不为12月且月份列表顺序
             elif is_sorted and months[0] != 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
-                    filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                    filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"  # 年份无需特殊处理
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
             # 若月份列表非顺序
@@ -222,9 +230,9 @@ class ObsParser:
                 for i, month in enumerate(months):
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     if i <= split_point:
-                        filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                        filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"  # 年份无需特殊处理
                     else:
-                        filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+                        filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
 
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
@@ -234,6 +242,10 @@ class ObsParser:
                     pravgs.append(curr_year_pravg)
             else:
                 pravgs.append(curr_year_pravg)
+
+        if use_anomaly:
+            pravgs = pravgs - avg
+
         return np.array(pravgs)
         # return ma.masked_array(pravgs)
 
@@ -617,4 +629,3 @@ class PaintUtils:
         plt.close()
         # plt.legend(loc='lower right')
         return plt
-
