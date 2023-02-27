@@ -53,21 +53,31 @@ class CaseParser:
         return pravgs
 
     @staticmethod
-    def get_one_2d_pravg(nc_path):
+    def get_one_2d_pravg(nc_path, valid_grid):
         """
         提取单个case文件的某个月分的PRAVG值(二维格点)
         :param nc_path: nc文件路径
         :return: 单个二维PRAVG数组
         """
         case = netCDF4.Dataset(nc_path)
-        pravg = case.variables["PRAVG"][:] * 24 * 3600  # 转换单位为mm/day
+        a = case.variables["PRAVG"][:] * 24 * 3600  # 转换单位为mm/day
         # if remove_index:
         #     for i in remove_index[::-1]:
         #         pravg = np.delete(pravg, i)
-        return pravg
+        inputs = []
+        for i, j in valid_grid:
+            temp = []
+            for m in range(a.shape[0]):
+                temp.append([
+                    [a[m][i - 1][j - 1], a[m][i - 1][j], a[m][i - 1][j + 1]],
+                    [a[m][i][j - 1], a[m][i][j], a[m][i][j + 1]],
+                    [a[m][i + 1][j - 1], a[m][i + 1][j], a[m][i + 1][j + 1]]
+                ])
+            inputs.append(temp)
+        return inputs
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, valid_grid, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
         """
         提取多个case文件的某个月分的PRAVG值(三维数组)
         :param jump_year: 跳过年份
@@ -92,11 +102,11 @@ class CaseParser:
                     if jump_year and jump_year <= filetime <= jump_year + relativedelta(years=1):
                         continue
                     if stime <= filetime <= etime:
-                        pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
+                        pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file), valid_grid)
                         if data_enhance:
                             # 像素点错位（8个方向）
                             pravg = OtherUtils.data_enhance(pravg)
-                        pravgs.append(pravg)
+                        pravgs += pravg
 
         results = np.array(pravgs)
 
@@ -180,13 +190,41 @@ class ObsParser:
         :param nc_path:nc文件路径
         :return:
         """
+
+        def organize_input(a):
+            inputs = []
+            valid_indexes = []
+            for i in range(1, len(a) - 1):
+                for j in range(1, len(a[i]) - 1):
+                    # 若周围存在无效格点，跳过
+                    if (isinstance(a[i - 1][j - 1], np.ma.core.MaskedConstant) or
+                            isinstance(a[i - 1][j], np.ma.core.MaskedConstant) or
+                            isinstance(a[i - 1][j + 1], np.ma.core.MaskedConstant) or
+                            isinstance(a[i][j - 1], np.ma.core.MaskedConstant) or
+                            isinstance(a[i][j], np.ma.core.MaskedConstant) or
+                            isinstance(a[i][j + 1], np.ma.core.MaskedConstant) or
+                            isinstance(a[i + 1][j - 1], np.ma.core.MaskedConstant) or
+                            isinstance(a[i + 1][j], np.ma.core.MaskedConstant) or
+                            isinstance(a[i + 1][j + 1], np.ma.core.MaskedConstant)):
+                        continue
+                    else:
+                        inputs.append([
+                            [a[i - 1][j - 1], a[i - 1][j], a[i - 1][j + 1]],
+                            [a[i][j - 1], a[i][j], a[i][j + 1]],
+                            [a[i + 1][j - 1], a[i + 1][j], a[i + 1][j + 1]]
+                        ])
+                        valid_indexes.append((i, j))
+            return inputs, valid_indexes
+
         obs = netCDF4.Dataset(nc_path)
         pravg = obs.variables["prec"][:] / 30  # 转换单位为mm/day
-        pravg = ObsParser.fill_na(pravg)
-        return pravg
+        # pravg = ObsParser.fill_na(pravg)
+        pravg, valid_indexes = organize_input(pravg)
+        return pravg, valid_indexes
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False, use_anomaly=False,
+                          avg=None):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -215,14 +253,14 @@ class ObsParser:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg, indexes = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
             # 若case不为12月且月份列表顺序
             elif is_sorted and months[0] != 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"  # 年份无需特殊处理
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg, indexes = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
             # 若月份列表非顺序
             elif not is_sorted:
@@ -234,19 +272,24 @@ class ObsParser:
                     else:
                         filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
 
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg, indexes = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
                     curr_year_pravg.append(pravg)
 
             if data_enhance:
                 for i in range(9):
                     pravgs.append(curr_year_pravg)
             else:
-                pravgs.append(curr_year_pravg)
+                for i in range(len(curr_year_pravg[0])):
+                    temp = []
+                    for j in range(len(curr_year_pravg)):
+                        temp.append(curr_year_pravg[j][i])
+                    pravgs.append(temp)
+        pravgs = np.array(pravgs)
 
         if use_anomaly:
             pravgs = pravgs - avg
 
-        return np.array(pravgs)
+        return pravgs, indexes
         # return ma.masked_array(pravgs)
 
     @staticmethod

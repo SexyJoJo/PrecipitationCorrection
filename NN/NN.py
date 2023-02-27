@@ -19,8 +19,9 @@ logging.basicConfig(filename='./log.txt', level=logging.DEBUG, format='%(asctime
 # 路径初始化
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
-SHAPE = torch.Tensor(
-    utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)).shape
+# SHAPE = torch.Tensor(
+#     utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)).shape
+SHAPE = np.ones((1, 5, 3, 3)).shape
 MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 
 
@@ -41,7 +42,10 @@ def get_avg():
     return case_avg, obs_avg
 
 
-case_avg, obs_avg = get_avg()
+case_avg = None
+obs_avg = None
+if USE_ANOMALY:
+    case_avg, obs_avg = get_avg()
 
 
 class NN(nn.Module):
@@ -51,50 +55,31 @@ class NN(nn.Module):
 
         # 输入[batch, 月份, 43, 39]
         self.lstm = nn.LSTM(
-            input_size=SHAPE[2] * SHAPE[3],
-            hidden_size=SHAPE[2] * SHAPE[3],
+            input_size=9,
+            hidden_size=9,
             bidirectional=True,
             batch_first=True
         )
         self.layer = nn.Sequential(
             nn.ReLU(),
-            nn.Linear(SHAPE[2] * SHAPE[3] * 2, SHAPE[2] * SHAPE[3])
+            nn.Linear(9 * 2, 9)
         )
 
         # 第一层卷积
         self.conv1 = nn.Sequential(
             nn.Conv2d(  # 定义1个2维的卷积核
-                in_channels=1,  # 输入通道的个数（单个case预报的月份个数）
+                in_channels=5,  # 输入通道的个数（单个case预报的月份个数）
                 out_channels=16,  # 输出通道（卷积核）的个数（越多则能识别更多边缘特征，任务不复杂赋值16，复杂可以赋值64）
                 kernel_size=(3, 3),  # 卷积核的大小
                 stride=(1, 1),  # 卷积核在图上滑动，每隔一个扫描的次数
                 padding=1,  # 周围填上多少圈的0, 一般为(kernel_size-1)/2
             ),
             nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=2)  # 经过最大值池化 输出传入下一个卷积
-
-            nn.Conv2d(
-                in_channels=16,  # 输入个数与上层输出一致
-                out_channels=32,
-                kernel_size=(3, 3),
-                stride=(1, 1),
-                padding=1
-            ),
-            nn.ReLU(),
-
-            nn.Conv2d(
-                in_channels=32,  # 输入个数与上层输出一致
-                out_channels=64,
-                kernel_size=(3, 3),
-                stride=(1, 1),
-                padding=1
-            ),
-            nn.ReLU(),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(
-                in_channels=64,  # 输入个数与上层输出一致
+                in_channels=16,  # 输入个数与上层输出一致
                 out_channels=SHAPE[1],
                 kernel_size=(3, 3),
                 stride=(1, 1),
@@ -102,23 +87,22 @@ class NN(nn.Module):
             ),
         )
 
-    def attention_net(self, lstm_output, final_state):
-        hidden = torch.cat((final_state[0], final_state[1]), dim=1).unsqueeze(2)
-        attn_weights = torch.bmm(lstm_output, hidden).squeeze(2)  # attn_weights : [batch_size, n_step]
-        soft_attn_weights = F.softmax(attn_weights, 1)
-        # context : [batch_size, n_hidden * num_directions(=2)]
-        context = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
-
-        return context, soft_attn_weights
+    # def attention_net(self, lstm_output, final_state):
+    #     hidden = torch.cat((final_state[0], final_state[1]), dim=1).unsqueeze(2)
+    #     attn_weights = torch.bmm(lstm_output, hidden).squeeze(2)  # attn_weights : [batch_size, n_step]
+    #     soft_attn_weights = F.softmax(attn_weights, 1)
+    #     # context : [batch_size, n_hidden * num_directions(=2)]
+    #     context = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
+    #
+    #     return context, soft_attn_weights
 
     def forward(self, x):
         x = x.flatten(-2, -1)
         x, (final_hidden_state, final_cell_state) = self.lstm(x)
-        x, attention = self.attention_net(x, final_hidden_state)
+        # x, attention = self.attention_net(x, final_hidden_state)
         # x = x.transpose(0, 1)
         x = self.layer(x)
-        x = x.unflatten(-1, (SHAPE[2], SHAPE[3]))
-        x = x[:, None]
+        x = x.unflatten(-1, (3, 3))
         x = self.conv1(x)
         x = self.conv2(x)
         return x
@@ -127,10 +111,12 @@ class NN(nn.Module):
 class TestDataset(Dataset):
     def __init__(self, TEST_START_YEAR, TEST_END_YEAR):
         super().__init__()
+        self.obs_data, valid_indexes = utils.ObsParser.get_many_2d_pravg(
+            OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS, use_anomaly=USE_ANOMALY, avg=obs_avg)
+        self.obs_data = torch.Tensor(self.obs_data)
+
         self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-            CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, use_anomaly=USE_ANOMALY, avg=case_avg))
-        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(
-            OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS, use_anomaly=USE_ANOMALY, avg=obs_avg))
+            CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, valid_indexes, use_anomaly=USE_ANOMALY, avg=case_avg))
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -142,16 +128,20 @@ class TestDataset(Dataset):
 class TrainDataset(Dataset):
     def __init__(self, JUMP_YEAR):
         super().__init__()
-        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-            CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY, case_avg
-        ))
-        self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(
+        self.obs_data, self.valid_indexes = utils.ObsParser.get_many_2d_pravg(
             OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY, obs_avg
+        )
+        self.obs_data = torch.Tensor(self.obs_data)
+        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
+            CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.valid_indexes, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY,
+            case_avg
         ))
+
         all_data = torch.cat([self.case_data, self.obs_data], 0)
-        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, torch.min(all_data),
-                                                                torch.max(all_data))
-        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, torch.min(all_data), torch.max(all_data))
+        self.data_min = torch.min(all_data)
+        self.data_max = torch.max(all_data)
+        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.data_min, self.data_max)
+        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.data_min, self.data_max)
         # self.len = self.case_data.shape
 
     def __getitem__(self, index):
@@ -183,7 +173,7 @@ def get_minmax(JUMP_YEAR):
 def train(test_year):
     total_training_loss_list = []  # 用于绘制损失趋势图
     total_test_loss_list = []
-    tensor_min, tensor_max = get_minmax(test_year)
+    # tensor_min, tensor_max = get_minmax(test_year)
 
     for epoch in range(EPOCH):
         # 模型训练
@@ -197,31 +187,32 @@ def train(test_year):
 
             training_loss = criterion(outputs, target)
             total_training_loss += training_loss.item()
-            if (i + 1) % (28 / BATCH_SIZE) == 0:
-                total_training_loss_list.append(total_training_loss)
             print(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
                   f"total_training_loss:{total_training_loss}")
-            logging.debug(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
-                          f"total_training_loss:{total_training_loss}")
+            # logging.debug(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
+            #               f"total_training_loss:{total_training_loss}")
             training_loss.backward()
             optimizer.step()
+        total_training_loss_list.append(total_training_loss)
 
         # 模型验证
         total_test_loss = 0.
         with torch.no_grad():
             for data in test_dataloader:
-                data[0] = utils.OtherUtils.min_max_normalization(data[0], tensor_min, tensor_max)
-                data[1] = utils.OtherUtils.min_max_normalization(data[1], tensor_min, tensor_max)
+                data[0] = utils.OtherUtils.min_max_normalization(data[0],
+                                                                 train_dataset.data_min, train_dataset.data_max)
+                data[1] = utils.OtherUtils.min_max_normalization(data[1],
+                                                                 train_dataset.data_min, train_dataset.data_max)
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
                 test_outputs = model(test_inputs)
                 test_loss = criterion(test_outputs, test_labels)
                 total_test_loss += test_loss.item()
-                total_test_loss_list.append(total_test_loss)
                 print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
                       f"total_testing_loss:{total_test_loss}")
-                logging.debug(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
-                              f"total_testing_loss:{total_test_loss}")
+                # logging.debug(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
+                #               f"total_testing_loss:{total_test_loss}")
+            total_test_loss_list.append(total_test_loss)
 
     # 绘制损失
     plt.plot(list(range(EPOCH)), total_training_loss_list, label="total training loss")
@@ -267,8 +258,8 @@ if __name__ == '__main__':
         logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
 
-        os.makedirs(rf"距平models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = rf"距平models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
+        os.makedirs(MODEL_PATH + rf"{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
+        model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 
