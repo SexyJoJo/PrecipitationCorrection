@@ -3,9 +3,9 @@ import netCDF4
 
 
 if __name__ == '__main__':
-    # 在这里修改数据路径与保存路径
-    data_path = r"E:\Data\PrecipitationCorrection\CASE\CASE1\TIME00"
-    save_path = r"./divided case/TIME00"
+    # 修改数据路径与保存路径
+    data_path = r"D:\Data\PrecipitationCorrection\CASE"
+    save_base_path = r"./divided case"
 
     for root, _, files in os.walk(data_path):
         for file in files:
@@ -20,9 +20,10 @@ if __name__ == '__main__':
                 # 金沙江流域（左矩形）：经度范围：90-100 纬度范围：36-26 rowmin:53 rowmax:95 colmin:48 colmax:86
                 # 长江上游（中矩形）：经度范围：100-110 纬度范围：24-35 rowmin:46 rowmax:87 colmin:80 colmax:115
                 # 长江中下游（右矩形）：经度范围：110-122 纬度范围：24-35 rowmin:46 rowmax:87 colmin:116 colmax:157
+                dirs = root.split("\\")
+                save_path = os.path.join(save_base_path, dirs[-3], dirs[-2], dirs[-1], "ChangJiang")
+                os.makedirs(save_path, exist_ok=True)
 
-                if not os.path.exists(save_path):
-                    os.mkdir(save_path)
                 # 流域经纬度划分
                 # 金沙江流域划分
                 JSJ_XLONG = XLONG[53:96, 48:87]
@@ -37,7 +38,7 @@ if __name__ == '__main__':
                 JSJ_nc.createVariable('XLAT', "f", ("x", "y"))
                 JSJ_nc.createVariable('PRAVG', "f", ("time", "x", "y"))
                 JSJ_nc.variables["XLONG"][:] = JSJ_XLONG
-                JSJ_nc.variables["XLAT"][:] = JSJ_XLONG
+                JSJ_nc.variables["XLAT"][:] = JSJ_XLAT
                 JSJ_nc.variables["time"][:] = time
                 JSJ_nc.variables["PRAVG"][:] = JSJ_PRAVG
 
