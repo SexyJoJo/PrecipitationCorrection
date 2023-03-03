@@ -67,7 +67,7 @@ class CaseParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None, data_enhance=False):
         """
         提取多个case文件的某个月分的PRAVG值(三维数组)
         :param jump_year: 跳过年份
@@ -100,14 +100,14 @@ class CaseParser:
 
         results = np.array(pravgs)
 
-        if data_enhance:
-            # for i in range(len(pravgs)):
-            #     pravgs[i] = pravgs[i].unsqueeze(0)
-            results = torch.cat(pravgs, dim=0)
-            return results
-
-        if use_anomaly:
-            results = results - avg
+        # if data_enhance:
+        #     # for i in range(len(pravgs)):
+        #     #     pravgs[i] = pravgs[i].unsqueeze(0)
+        #     results = torch.cat(pravgs, dim=0)
+        #     return results
+        #
+        # if use_anomaly:
+        #     results = results - avg
 
         return results
 
@@ -186,7 +186,7 @@ class ObsParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False, use_anomaly=False, avg=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None, data_enhance=False):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -242,9 +242,6 @@ class ObsParser:
                     pravgs.append(curr_year_pravg)
             else:
                 pravgs.append(curr_year_pravg)
-
-        if use_anomaly:
-            pravgs = pravgs - avg
 
         return np.array(pravgs)
         # return ma.masked_array(pravgs)
