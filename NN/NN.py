@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from numpy import ma
 from torch.utils.data import Dataset, DataLoader
 import utils
 from NN_CONST import *
@@ -19,33 +20,8 @@ logging.basicConfig(filename='./log.txt', level=logging.DEBUG, format='%(asctime
 # 路径初始化
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
-# SHAPE = torch.Tensor(
-#     utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)).shape
 SHAPE = np.ones((1, 5, 3, 3)).shape
 MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
-
-
-def get_avg():
-    """取数据集的均值用于距平与数据集最值用于归一化"""
-    case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-        CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, DATA_ENHANCE
-    ))
-
-    months = utils.OtherUtils.get_predict_months(DATE, case_data.shape[1])
-
-    obs_data = torch.Tensor(
-        utils.ObsParser.get_many_2d_pravg(
-            OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, months, DATA_ENHANCE
-        ))
-    case_avg = np.mean(case_data.numpy(), axis=0)
-    obs_avg = np.mean(obs_data.numpy(), axis=0)
-    return case_avg, obs_avg
-
-
-case_avg = None
-obs_avg = None
-if USE_ANOMALY:
-    case_avg, obs_avg = get_avg()
 
 
 class NN(nn.Module):
@@ -77,15 +53,17 @@ class NN(nn.Module):
             nn.ReLU(),
         )
 
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(
-                in_channels=16,  # 输入个数与上层输出一致
-                out_channels=SHAPE[1],
-                kernel_size=(3, 3),
-                stride=(1, 1),
-                padding=1
-            ),
-        )
+        self.fc = nn.Linear(16 * 3 * 3, 5 * 3 * 3)
+
+        # self.conv2 = nn.Sequential(
+        #     nn.Conv2d(
+        #         in_channels=16,  # 输入个数与上层输出一致
+        #         out_channels=SHAPE[1],
+        #         kernel_size=(3, 3),
+        #         stride=(1, 1),
+        #         padding=1
+        #     ),
+        # )
 
     # def attention_net(self, lstm_output, final_state):
     #     hidden = torch.cat((final_state[0], final_state[1]), dim=1).unsqueeze(2)
@@ -97,6 +75,7 @@ class NN(nn.Module):
     #     return context, soft_attn_weights
 
     def forward(self, x):
+        batch_size = x.size(0)
         x = x.flatten(-2, -1)
         x, (final_hidden_state, final_cell_state) = self.lstm(x)
         # x, attention = self.attention_net(x, final_hidden_state)
@@ -104,39 +83,36 @@ class NN(nn.Module):
         x = self.layer(x)
         x = x.unflatten(-1, (3, 3))
         x = self.conv1(x)
-        x = self.conv2(x)
+        x = x.view(batch_size, -1)
+        x = self.fc(x)
+        x = x.unflatten(-1, (5, 3, 3))
         return x
-
-
-class TestDataset(Dataset):
-    def __init__(self, TEST_START_YEAR, TEST_END_YEAR):
-        super().__init__()
-        self.obs_data, valid_indexes = utils.ObsParser.get_many_2d_pravg(
-            OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS, use_anomaly=USE_ANOMALY, avg=obs_avg)
-        self.obs_data = torch.Tensor(self.obs_data)
-
-        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-            CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, valid_indexes, use_anomaly=USE_ANOMALY, avg=case_avg))
-
-    def __getitem__(self, index):
-        return self.case_data[index], self.obs_data[index]
-
-    def __len__(self):
-        return self.case_data.shape[0]
 
 
 class TrainDataset(Dataset):
     def __init__(self, JUMP_YEAR):
         super().__init__()
-        self.obs_data, self.valid_indexes = utils.ObsParser.get_many_2d_pravg(
-            OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY, obs_avg
+        # 读取原始数据
+        self.obs_data = utils.ObsParser.get_many_2d_pravg(
+            OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR
         )
-        self.obs_data = torch.Tensor(self.obs_data)
-        self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-            CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.valid_indexes, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY,
-            case_avg
-        ))
+        self.case_data = utils.CaseParser.get_many_2d_pravg(
+            CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR
+        )
 
+        # 原始数据转距平
+        self.case_avg = np.mean(self.case_data, axis=0)
+        self.obs_avg = np.mean(self.obs_data, axis=0)
+        self.case_data = self.case_data - self.case_avg
+        self.obs_data = self.obs_data - self.obs_avg
+
+        # 数据维度重新组织为n*3*3
+        self.obs_data, self.valid_indexes = utils.ObsParser.organize_input(self.obs_data)
+        self.case_data = utils.CaseParser.organize_input(self.case_data, self.valid_indexes)
+
+        # 数据归一化
+        self.case_data = torch.Tensor(self.case_data)
+        self.obs_data = torch.Tensor(self.obs_data)
         all_data = torch.cat([self.case_data, self.obs_data], 0)
         self.data_min = torch.min(all_data)
         self.data_max = torch.max(all_data)
@@ -151,23 +127,44 @@ class TrainDataset(Dataset):
         return self.case_data.shape[0]
 
 
+class TestDataset(Dataset):
+    def __init__(self, TEST_START_YEAR, TEST_END_YEAR):
+        super().__init__()
+        # 读取原始数据
+        self.obs_data = utils.ObsParser.get_many_2d_pravg(
+            OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS)
+        self.case_data = utils.CaseParser.get_many_2d_pravg(
+            CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA)
+
+        # 数据转距平
+        self.case_data = self.case_data - train_dataset.case_avg
+        self.obs_data = self.obs_data - train_dataset.obs_avg
+
+        # 数据维度重新组织为n*3*3
+        self.obs_data, self.valid_indexes = utils.ObsParser.organize_input(self.obs_data)
+        self.case_data = utils.CaseParser.organize_input(self.case_data, self.valid_indexes)
+
+        # 数据归一化
+        self.case_data = torch.Tensor(self.case_data)
+        self.obs_data = torch.Tensor(self.obs_data)
+        self.case_data = utils.OtherUtils.min_max_normalization(
+            self.case_data, train_dataset.data_min, train_dataset.data_max)
+        self.obs_data = utils.OtherUtils.min_max_normalization(
+            self.obs_data, train_dataset.data_min, train_dataset.data_max)
+
+    def __getitem__(self, index):
+        return self.case_data[index], self.obs_data[index]
+
+    def __len__(self):
+        return self.case_data.shape[0]
+
+
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
-
-
-def get_minmax(JUMP_YEAR):
-    case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-        CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY, case_avg
-    ))
-    obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(
-        OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, MONTHS, JUMP_YEAR, DATA_ENHANCE, USE_ANOMALY, obs_avg
-    ))
-    all_data = torch.cat([case_data, obs_data], 0)
-    return torch.min(all_data), torch.max(all_data)
 
 
 def train(test_year):
@@ -199,10 +196,6 @@ def train(test_year):
         total_test_loss = 0.
         with torch.no_grad():
             for data in test_dataloader:
-                data[0] = utils.OtherUtils.min_max_normalization(data[0],
-                                                                 train_dataset.data_min, train_dataset.data_max)
-                data[1] = utils.OtherUtils.min_max_normalization(data[1],
-                                                                 train_dataset.data_min, train_dataset.data_max)
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
                 test_outputs = model(test_inputs)
