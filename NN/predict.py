@@ -7,49 +7,42 @@ from utils import OtherUtils, PaintUtils
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms
 import utils
-from NN import NN, TestDataset, TrainDataset, get_avg, get_minmax
+from train import TestDataset, TrainDataset
 import matplotlib.colors
+from models import *
 
 # 路径初始化
 CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
 SHAPE = np.ones((1, 5, 3, 3)).shape
-
-MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
-
-if USE_ANOMALY:
-    case_avg, obs_avg = get_avg()
+MONTHS = utils.OtherUtils.get_predict_months(DATE, 1)
 
 
 def test():
     # na_list = utils.ObsParser.get_na_index(OBS_DIR, AREA)
-    for m in range(len(MONTHS)):
-        corr_cases, test_cases, test_obses = [], [], []
+    corr_cases, test_cases, test_obses = [], [], []
+    for TEST_YEAR in range(1991, 2020):
+        # 输出数组初始化
+        inputs_map = np.zeros([1, 5, 43, 39]) + np.nan
+        outputs_map = np.zeros([1, 5, 43, 39]) + np.nan
+        labels_map = np.zeros([1, 5, 43, 39]) + np.nan
 
-        for TEST_YEAR in range(1991, 2020):
-            # 输出数组初始化
-            inputs_map = np.zeros([1, 5, 43, 39]) + np.nan
-            outputs_map = np.zeros([1, 5, 43, 39]) + np.nan
-            labels_map = np.zeros([1, 5, 43, 39]) + np.nan
+        # 读取模型
+        model = LSTM(input_size=45, hidden_size=64, num_layers=1, output_size=1)
+        model.load_state_dict(
+            torch.load(MODEL_PATH + f"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-            # 读取模型
-            model = NN()
-            model.load_state_dict(
-                torch.load(MODEL_PATH + f"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # 加载训练集
+        train_dataset = TrainDataset(TEST_YEAR)
+        # 加载测试集
+        test_dataset = TestDataset(TEST_YEAR, TEST_YEAR, train_dataset)
+        test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
 
-            # 加载训练集
-            train_dataset = TrainDataset(TEST_YEAR)
-            # 加载测试集
-            test_dataset = TestDataset(TEST_YEAR, TEST_YEAR)
-            test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
-
+        for m in range(len(MONTHS)):
             with torch.no_grad():
                 # 处理每个格点
                 for cnt, data in enumerate(test_dataloader):
-                    data[0] = OtherUtils.min_max_normalization(data[0], train_dataset.data_min, train_dataset.data_max)
-                    data[1] = OtherUtils.min_max_normalization(data[1], train_dataset.data_min, train_dataset.data_max)
-
                     inputs, labels = data
                     inputs, labels = inputs.to(device), labels.to(device)
                     outputs = model(inputs)
@@ -64,21 +57,21 @@ def test():
 
                     a, b = train_dataset.valid_indexes[cnt]
                     inputs_map[0][m][a][b] = inputs[0][m][1][1]
-                    outputs_map[0][m][a][b] = outputs[0][m][1][1]
-                    labels_map[0][m][a][b] = labels[0][m][1][1]
+                    outputs_map[0][m][a][b] = outputs[0][0][0]
+                    labels_map[0][m][a][b] = labels[0][0][0]
 
             print(f"{TEST_YEAR}年{MONTHS[m]}月")
-            print("订正前mse", utils.OtherUtils.mse(inputs_map, labels_map))
-            print("订正后mse", utils.OtherUtils.mse(outputs_map, labels_map))
+            print("订正前mse", utils.OtherUtils.mse(inputs_map[0][m], labels_map[0][m]))
+            print("订正后mse", utils.OtherUtils.mse(outputs_map[0][m], labels_map[0][m]))
 
             test_case = inputs_map[0][m]
             corr_case = outputs_map[0][m]
             test_obs = labels_map[0][m]
 
             if USE_ANOMALY:
-                test_cases.append(test_case + case_avg[m])
-                corr_cases.append(corr_case + case_avg[m])
-                test_obses.append(test_obs + obs_avg[m])
+                test_cases.append(test_case + train_dataset.case_avg[m])
+                corr_cases.append(corr_case + train_dataset.case_avg[m])
+                test_obses.append(test_obs + train_dataset.obs_avg[m])
                 norm = matplotlib.colors.Normalize(vmin=-5, vmax=5)
             else:
                 test_cases.append(test_case)
@@ -109,25 +102,25 @@ def test():
             plt.savefig(RESULT_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}/{TEST_YEAR}年{MONTHS[m]}月")
             plt.close()
 
-        # TCC相关
-        corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)  # 订正后与真实值
-        case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)  # 订正前与真实值
-        tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
-        if not os.path.exists(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
-            os.makedirs(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
-        tcc_img.savefig(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
-        print("tcc已保存", rf"{EVALUATE_PATH}/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
-        tcc_img.close()
+    # TCC相关
+    corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)  # 订正后与真实值
+    case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)  # 订正前与真实值
+    tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
+    if not os.path.exists(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
+        os.makedirs(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
+    tcc_img.savefig(EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
+    print("tcc已保存", rf"{EVALUATE_PATH}/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
+    tcc_img.close()
 
-        # ACC相关
-        corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
-        case_acc = OtherUtils.cal_ACC(test_cases, test_obses)
-        acc_img = PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
-        if not os.path.exists(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
-            os.makedirs(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
-        acc_img.savefig(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
-        print("tcc已保存", rf"{EVALUATE_PATH}/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
-        acc_img.close()
+    # ACC相关
+    corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses)
+    case_acc = OtherUtils.cal_ACC(test_cases, test_obses)
+    acc_img = PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
+    if not os.path.exists(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"):
+        os.makedirs(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}")
+    acc_img.savefig(EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
+    print("tcc已保存", rf"{EVALUATE_PATH}/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_91-19年{MONTHS[m]}月")
+    acc_img.close()
 
 
 if __name__ == '__main__':

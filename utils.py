@@ -285,10 +285,13 @@ class ObsParser:
                                 isinstance(a[i + 1][j + 1], np.ma.core.MaskedConstant)):
                             continue
                         else:
+                            # all_months_one_grid.append([
+                            #     [a[i - 1][j - 1], a[i - 1][j], a[i - 1][j + 1]],
+                            #     [a[i][j - 1], a[i][j], a[i][j + 1]],
+                            #     [a[i + 1][j - 1], a[i + 1][j], a[i + 1][j + 1]]
+                            # ])
                             all_months_one_grid.append([
-                                [a[i - 1][j - 1], a[i - 1][j], a[i - 1][j + 1]],
-                                [a[i][j - 1], a[i][j], a[i][j + 1]],
-                                [a[i + 1][j - 1], a[i + 1][j], a[i + 1][j + 1]]
+                                [a[i][j]]
                             ])
                             if (i, j) not in valid_indexes:
                                 valid_indexes.append((i, j))
@@ -462,7 +465,7 @@ class OtherUtils:
 
     @staticmethod
     def mse(y1, y2):
-        return (np.square(y1 - y2)).mean()
+        return np.nanmean(np.square(y1 - y2))
 
     @staticmethod
     def min_max_normalization(tensor, tensor_min, tensor_max):

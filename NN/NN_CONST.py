@@ -3,15 +3,15 @@ CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
-MODEL_PATH = "./距平models"
-RESULT_PATH = "./results"
-EVALUATE_PATH = "./评价指标"
+DESCRIPTION = "LSTM-原始值-输入5个月3乘3-输出1个月1乘1"
+LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
+MODEL_PATH = rf"./output/{DESCRIPTION}/models"
+RESULT_PATH = rf"./output/{DESCRIPTION}/results"
+EVALUATE_PATH = rf"./output/{DESCRIPTION}/评价指标"
 
 DATE = "0302"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
-
-# 预报月份 预报日期往后5个月
 
 # 流域名称 ['ChangJiang', 'HuangHe', 'HeHai']
 BASIN = 'ChangJiang'
@@ -24,11 +24,11 @@ AREA = "JSJ"
 TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2019
 DATA_ENHANCE = False
-USE_ANOMALY = True
+USE_ANOMALY = False
 # JUMP_YEAR = 2019
 
 # 训练参数
-EPOCH = 500
+EPOCH = 150
 BATCH_SIZE = 256
 LR = 0.005
 
