@@ -28,7 +28,7 @@ def test():
         labels_map = np.zeros([1, 5, 43, 39]) + np.nan
 
         # 读取模型
-        model = LSTM(input_size=45, hidden_size=64, num_layers=1, output_size=1)
+        model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
         model.load_state_dict(
             torch.load(MODEL_PATH + f"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

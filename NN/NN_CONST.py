@@ -3,7 +3,7 @@ CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
-DESCRIPTION = "LSTM-原始值-输入5个月3乘3-输出1个月1乘1"
+DESCRIPTION = "LSTM-距平-输入5个月3乘3-输出1个月1乘1"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"
@@ -24,7 +24,7 @@ AREA = "JSJ"
 TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2019
 DATA_ENHANCE = False
-USE_ANOMALY = False
+USE_ANOMALY = True
 # JUMP_YEAR = 2019
 
 # 训练参数

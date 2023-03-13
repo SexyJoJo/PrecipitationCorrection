@@ -77,12 +77,11 @@ class LSTM(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        x = x.flatten(-2, -1)
-        x = x.flatten(-2, -1)
-        x = x.view(len(x), 1, -1)
+        x = x.view(len(x), 5, -1)
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         x, _ = self.lstm(x, (h0, c0))
+        x = x[:, -1, :]
         x = self.fc(x)
-        x.unflatten(-1, (1, 1, 1))
+        x = x.unflatten(-1, (1, 1, 1))
         return x

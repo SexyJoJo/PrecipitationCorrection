@@ -156,7 +156,7 @@ if __name__ == '__main__':
     # 所有年份中选一年作为测试集，其他年份作为训练集，以不同的训练集循环训练多个模型
     for TEST_YEAR in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
         # 初始化模型与数据集
-        model = LSTM(input_size=45, hidden_size=64, num_layers=1, output_size=1)
+        model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         criterion = torch.nn.MSELoss()
