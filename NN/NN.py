@@ -42,20 +42,21 @@ class TrainDataset(Dataset):
             OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR, DATA_ENHANCE
         ))
 
-        # 数据转距平
         self.case_avg = np.mean(self.case_data.numpy(), axis=0)
         self.obs_avg = np.mean(self.obs_data.numpy(), axis=0)
-        self.case_data = self.case_data - self.case_avg
-        self.obs_data = self.obs_data - self.obs_avg
+        if USE_ANOMALY:
+            # 数据转距平
+            self.case_data = self.case_data - self.case_avg
+            self.obs_data = self.obs_data - self.obs_avg
 
         # 数据归一化
         all_data = torch.cat([self.case_data, self.obs_data], 0)
         self.tensor_min = torch.min(all_data)
         self.tensor_max = torch.max(all_data)
+        # self.tensor_min = torch.min(self.obs_data)
+        # self.tensor_max = torch.max(self.obs_data)
         self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.tensor_min, self.tensor_max)
         self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.tensor_min, self.tensor_max)
-
-        # self.len = self.case_data.shape
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -278,8 +279,8 @@ if __name__ == '__main__':
         logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
 
-        os.makedirs(rf"距平models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = rf"距平models/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
+        os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
+        model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{TEST_YEAR}年).pth"
         torch.save(model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 

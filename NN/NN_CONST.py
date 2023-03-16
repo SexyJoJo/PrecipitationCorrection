@@ -1,11 +1,6 @@
 # 数据根目录
-CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
-OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
-
-# 输出根目录
-MODEL_PATH = "./距平models"
-RESULT_PATH = "./距平results"
-EVALUATE_PATH = "./距平评价指标"
+CASE_DIR = r"D:\PythonProjects\PrecipitationCorrection\divide area\divided case"
+OBS_DIR = r"D:\PythonProjects\PrecipitationCorrection\divide area\divided obs"
 
 DATE = "0302"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
@@ -24,12 +19,20 @@ AREA = "JSJ"
 TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2019
 DATA_ENHANCE = False
-USE_ANOMALY = True
+USE_ANOMALY = False
+
+if USE_ANOMALY:
+    # 输出根目录
+    MODEL_PATH = "./距平值models"
+    RESULT_PATH = "./距平值results"
+    EVALUATE_PATH = "./距平值评价指标"
+else:
+    MODEL_PATH = "./原始值models"
+    RESULT_PATH = "./原始值results"
+    EVALUATE_PATH = "./原始值评价指标"
 # JUMP_YEAR = 2019
 
 # 训练参数
-EPOCH = 500
-BATCH_SIZE = 28
+EPOCH = 50
+BATCH_SIZE = 4
 LR = 0.005
-
-# MODEL_PATH = r"91-18.pth"

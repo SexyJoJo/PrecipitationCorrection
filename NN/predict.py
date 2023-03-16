@@ -16,20 +16,6 @@ CASE_DIR = os.path.join(CASE_DIR, DATE, CASE_NUM, TIME, BASIN)
 OBS_DIR = os.path.join(OBS_DIR, BASIN)
 MONTHS = utils.OtherUtils.get_predict_months(DATE, 5)
 
-# class TestDataset(Dataset):
-#     def __init__(self, TEST_START_YEAR, TEST_END_YEAR):
-#         super().__init__()
-#         self.case_data = torch.Tensor(utils.CaseParser.get_many_2d_pravg(
-#             CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, use_anomaly=USE_ANOMALY))
-#         self.obs_data = torch.Tensor(utils.ObsParser.get_many_2d_pravg(
-#             OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, MONTHS, use_anomaly=USE_ANOMALY))
-#
-#     def __getitem__(self, index):
-#         return self.case_data[index], self.obs_data[index]
-#
-#     def __len__(self):
-#         return self.case_data.shape[0]
-
 
 def test():
     na_list = utils.ObsParser.get_na_index(OBS_DIR, AREA)
@@ -39,7 +25,6 @@ def test():
             # 加载训练集
             train_dataset = TrainDataset(TEST_YEAR)
             tensor_min, tensor_max = train_dataset.tensor_min, train_dataset.tensor_max
-            case_avg, obs_avg = train_dataset.case_avg, train_dataset.obs_avg
 
             # 加载测试集
             test_dataset = TestDataset(TEST_YEAR, TEST_YEAR)
@@ -75,9 +60,15 @@ def test():
                         test_case[a][b] = np.nan
                         corr_case[a][b] = np.nan
                         test_obs[a][b] = np.nan
-                    test_cases.append(test_case + case_avg[i])
-                    corr_cases.append(corr_case + case_avg[i])
-                    test_obses.append(test_obs + obs_avg[i])
+                    if USE_ANOMALY:
+                        case_avg, obs_avg = train_dataset.case_avg, train_dataset.obs_avg
+                        test_cases.append(test_case + case_avg[i])
+                        corr_cases.append(corr_case + case_avg[i])
+                        test_obses.append(test_obs + obs_avg[i])
+                    else:
+                        test_cases.append(test_case)
+                        corr_cases.append(corr_case)
+                        test_obses.append(test_obs)
 
                     plt.rcParams['font.family'] = ['SimHei']
                     fig = plt.figure()
@@ -86,7 +77,10 @@ def test():
                     ax2 = fig.add_subplot(1, 3, 2)
                     ax3 = fig.add_subplot(1, 3, 3)
 
-                    norm = matplotlib.colors.Normalize(vmin=-5, vmax=5)
+                    if USE_ANOMALY:
+                        norm = matplotlib.colors.Normalize(vmin=-5, vmax=5)
+                    else:
+                        norm = matplotlib.colors.Normalize(vmin=0, vmax=15)
                     ax1.set_title("订正前")
                     subfig = ax1.imshow(np.flip(inputs[0][i].numpy(), axis=0), norm=norm)
 
