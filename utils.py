@@ -188,7 +188,8 @@ class ObsParser:
         :return:
         """
         obs = netCDF4.Dataset(nc_path)
-        pravg = obs.variables["prec"][:] / 30  # 转换单位为mm/day
+        pravg = obs.variables["prec"][:]
+        pravg = pravg / 30  # 转换单位为mm/day
         # pravg = ObsParser.fill_na(pravg)
         return pravg
 
@@ -476,6 +477,16 @@ class OtherUtils:
     def min_max_denormalization(tensor, tensor_min, tensor_max):
         """MinMax反归一化"""
         return (tensor_max - tensor_min) * tensor + tensor_min
+
+    @staticmethod
+    def zscore_normalization(tensor, input_mean, input_std):
+        """z-score归一化"""
+        return (tensor - input_mean) / input_std
+
+    @staticmethod
+    def zscore_denormalization(tensor, input_mean, input_std):
+        """z-score反归一化"""
+        return tensor * input_std + input_mean
 
     @staticmethod
     def data_enhance(ori_tensor):

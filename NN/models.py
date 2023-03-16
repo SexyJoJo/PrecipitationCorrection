@@ -85,3 +85,35 @@ class LSTM(nn.Module):
         x = self.fc(x)
         x = x.unflatten(-1, (1, 1, 1))
         return x
+
+
+class ANN(nn.Module):
+    def __init__(self):
+        super(ANN, self).__init__()
+
+        self.fc1 = nn.Linear(45, 64)  # 输入层到第一个隐藏层
+        self.fc2 = nn.Linear(64, 64)  # 第一个隐藏层到第二个隐藏层
+        self.fc3 = nn.Linear(64, 64)  # 第二个隐藏层到第三个隐藏层
+        self.fc4 = nn.Linear(64, 1)  # 第三个隐藏层到输出层
+        self.tanh = nn.Tanh()  # 双曲正切激活函数
+        self.dropout = nn.Dropout(p=1)  # Dropout概率为1
+
+    def forward(self, x):
+        x = x.flatten(-2, -1)
+        x = x.flatten(-2, -1)
+
+        x = self.fc1(x)
+        x = self.tanh(x)
+        x = self.dropout(x)
+
+        x = self.fc2(x)
+        x = self.tanh(x)
+        x = self.dropout(x)
+
+        x = self.fc3(x)
+        x = self.tanh(x)
+        x = self.dropout(x)
+
+        x = self.fc4(x)
+        x = x.unflatten(-1, (1, 1, 1))
+        return x

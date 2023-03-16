@@ -32,26 +32,29 @@ class TrainDataset(Dataset):
             CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR
         )
 
+        # # 均值 标准差 (单值)用于z-score归一化
+        # self.case_mean = np.mean(self.case_data)
+        # self.case_std = np.std(self.case_data)
+
         if USE_ANOMALY:
-            # 原始数据转距平
             self.case_avg = np.mean(self.case_data, axis=0)
             self.obs_avg = np.mean(self.obs_data, axis=0)
             self.case_data = self.case_data - self.case_avg
             self.obs_data = self.obs_data - self.obs_avg
 
+        # 数据归一化
+        self.data_min = np.min(self.case_data)
+        self.data_max = np.max(self.case_data)
+        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.data_min, self.data_max)
+        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.data_min, self.data_max)
+        # self.case_data = utils.OtherUtils.zscore_normalization(self.case_data, self.case_mean, self.case_std)
+        # self.obs_data = utils.OtherUtils.zscore_normalization(self.obs_data, self.case_mean, self.case_std)
+
         # 数据维度重新组织为n*3*3
         self.obs_data, self.valid_indexes = utils.ObsParser.organize_input(self.obs_data)
         self.case_data = utils.CaseParser.organize_input(self.case_data, self.valid_indexes)
-
-        # 数据归一化
         self.case_data = torch.Tensor(self.case_data)
         self.obs_data = torch.Tensor(self.obs_data)
-        # all_data = torch.cat([self.case_data, self.obs_data], 0)
-        self.data_min = torch.min(self.case_data)
-        self.data_max = torch.max(self.case_data)
-        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.data_min, self.data_max)
-        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.data_min, self.data_max)
-        # self.len = self.case_data.shape
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -69,14 +72,10 @@ class TestDataset(Dataset):
         self.case_data = utils.CaseParser.get_many_2d_pravg(
             CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA)
 
+        # 数据转距平
         if USE_ANOMALY:
-            # 数据转距平
             self.case_data = self.case_data - train_dataset.case_avg
             self.obs_data = self.obs_data - train_dataset.obs_avg
-
-        # 数据维度重新组织为n*3*3
-        self.obs_data, self.valid_indexes = utils.ObsParser.organize_input(self.obs_data)
-        self.case_data = utils.CaseParser.organize_input(self.case_data, self.valid_indexes)
 
         # 数据归一化
         self.case_data = torch.Tensor(self.case_data)
@@ -85,6 +84,14 @@ class TestDataset(Dataset):
             self.case_data, train_dataset.data_min, train_dataset.data_max)
         self.obs_data = utils.OtherUtils.min_max_normalization(
             self.obs_data, train_dataset.data_min, train_dataset.data_max)
+        # self.case_data = utils.OtherUtils.zscore_normalization(
+        #     self.case_data, train_dataset.case_mean, train_dataset.case_std)
+        # self.obs_data = utils.OtherUtils.zscore_normalization(
+        #     self.obs_data, train_dataset.case_mean, train_dataset.case_std)
+
+        # 数据维度重新组织为n*3*3
+        self.obs_data, self.valid_indexes = utils.ObsParser.organize_input(self.obs_data)
+        self.case_data = utils.CaseParser.organize_input(self.case_data, self.valid_indexes)
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -156,7 +163,8 @@ if __name__ == '__main__':
     # 所有年份中选一年作为测试集，其他年份作为训练集，以不同的训练集循环训练多个模型
     for TEST_YEAR in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
         # 初始化模型与数据集
-        model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
+        # model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
+        model = ANN()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         criterion = torch.nn.MSELoss()

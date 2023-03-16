@@ -24,11 +24,12 @@ def test():
     for TEST_YEAR in range(1991, 2020):
         # 输出数组初始化
         inputs_map = np.zeros([1, 5, 43, 39]) + np.nan
-        outputs_map = np.zeros([1, 5, 43, 39]) + np.nan
-        labels_map = np.zeros([1, 5, 43, 39]) + np.nan
+        outputs_map = np.zeros([1, 1, 43, 39]) + np.nan
+        labels_map = np.zeros([1, 1, 43, 39]) + np.nan
 
         # 读取模型
-        model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
+        # model = LSTM(input_size=9, hidden_size=64, num_layers=1, output_size=1)
+        model = ANN()
         model.load_state_dict(
             torch.load(MODEL_PATH + f"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{TEST_YEAR}年).pth"))
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,6 +55,13 @@ def test():
                                                                 train_dataset.data_min, train_dataset.data_max)
                     labels = OtherUtils.min_max_denormalization(labels,
                                                                 train_dataset.data_min, train_dataset.data_max)
+
+                    # outputs = OtherUtils.zscore_denormalization(outputs,
+                    #                                             train_dataset.case_mean, train_dataset.case_std)
+                    # inputs = OtherUtils.zscore_denormalization(inputs,
+                    #                                            train_dataset.case_mean, train_dataset.case_std)
+                    # labels = OtherUtils.zscore_denormalization(labels,
+                    #                                            train_dataset.case_mean, train_dataset.case_std)
 
                     a, b = train_dataset.valid_indexes[cnt]
                     inputs_map[0][m][a][b] = inputs[0][m][1][1]
