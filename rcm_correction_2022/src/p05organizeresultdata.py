@@ -15,6 +15,8 @@
 '''
 
 # here put the import lib
+import os
+
 import netCDF4 as nc
 import numpy as np
 import torch
@@ -29,14 +31,14 @@ def organize_result_data(year=1991):
     area = 'JSJ'
     obs_month = 2
     begin_index = 4  # 列下标从2开始，包含经纬度；如果设置为4，则跳过经纬度
-    model_name = 'lstm-l2h64d2'
+    model_name = 'ann-l1h4-tanh-bn0-dp1'
     # 1、提取模型
-    model_file = f'../result/{model_name}/model-{area}-c01-0131-00-y{year}-l2h64-{model_name}.pth'
+    model_file = f'../result/{model_name}/model-{area}-c01-0131-00-y{year}-{model_name}.pth'
     # model_file = f'../result/{model_name}/model-{area}-c01-0131-00-y{year}-{model_name}.pth'
     model = torch.load(model_file)
     # 2、提取数据，将格点数据生成为训练样本集合
-    data_file = fr'../data/202301-gridpoint/{area}_point_PRAVG_{year}013100c01_{year}_monthly.txt'
-    para_file = fr'../data/202301-gridpoint/{area}_point_normparam_PRAVG_013100c01_monthly.txt'
+    data_file = fr'../../divide area/data/202301-gridpoint/{area}_point_PRAVG_{year}013100c01_{year}_monthly.txt'
+    para_file = fr'../../divide area/data/202301-gridpoint/{area}_point_normparam_PRAVG_013100c01_monthly.txt'
 
     data_oneyear = np.loadtxt(data_file, delimiter='\t', skiprows=1)
     para_norm = np.loadtxt(para_file, delimiter='\t', skiprows=1)
@@ -48,7 +50,7 @@ def organize_result_data(year=1991):
     # 3、使用模型生成结果数据
     data_x = data_oneyear[:, begin_index: data_oneyear.shape[1] - 1]
     data_x = torch.from_numpy(data_x).to(torch.float32)
-    data_x = data_x.view(len(data_x), 1, -1)  # 增加一个len维度，以对应lstm
+    # data_x = data_x.view(len(data_x), 1, -1)  # 增加一个len维度，以对应lstm
     data_y = model(data_x)
     data_y = data_y.detach().numpy()
     # 反归一化
@@ -56,8 +58,9 @@ def organize_result_data(year=1991):
     # print(data_y)
 
     # 4、将结果数据恢复成格点形状
-    obs_ncfile = fr'../data/dividedobs/ChangJiang/{area}_obs_prec_rcm_{year}{str(obs_month).zfill(2)}.nc'
-    pred_ncfile = fr'../result/{area}_PRcor_{year}013100c01_{year}_monthly-{model_name}.nc'
+    obs_ncfile = fr'../../divide area/divided obs/ChangJiang/{area}_obs_prec_rcm_{year}{str(obs_month).zfill(2)}.nc'
+    os.makedirs(fr'../result/{model_name}-nc', exist_ok=True)
+    pred_ncfile = fr'../result/{model_name}-nc/{area}_PRcor_{year}013100c01_{year}_monthly-{model_name}.nc'
 
     obs_data = nc.Dataset(obs_ncfile)
     obs_lat = obs_data.variables["lat2d"][:]
@@ -83,6 +86,7 @@ def organize_result_data(year=1991):
     pred_data.variables["prcor"][:] = prcor[:]
 
     print(pred_ncfile)
+    print(utils.OtherUtils.mse(prcor, prec))
     # 检查结果一致性
     for row in range(prec.shape[0]):
         for col in range(prec.shape[1]):
@@ -97,17 +101,20 @@ def organize_result_data(year=1991):
 # 计算结果度量
 def cal_measurement():
     # model_name = 'ann-l3h64-tanh-bn0-dp1'
-    model_name = 'lstm-l2h64d2'
+    # model_name = 'lstm-l2h64d2'
+    # model_name = 'ann-l1h32-tanh-bn0-dp1'
+    model_name = 'ann-l1h4-tanh-bn0-dp1'
+
 
     cases = []
     cors = []
     obses = []
 
     for year in range(1991, 2020):
-        case_file = fr'../data/dividedcase/0131/CASE1/TIME00/ChangJiang/JSJ_PRAVG_{year}013100c01_{year}_monthly.nc'
+        case_file = fr'../../divide area/divided case/0131/CASE1/TIME00/ChangJiang/JSJ_PRAVG_{year}013100c01_{year}_monthly.nc'
         cor_file = fr'../result/{model_name}-nc/JSJ_PRcor_{year}013100c01_{year}_monthly-{model_name}.nc'
         # cor_file = fr'../result/{model_name}-nc/JSJ_PRcor_{year}013100c01_{year}_monthly.nc'
-        obs_file = fr'../data/dividedobs/ChangJiang/JSJ_obs_prec_rcm_{year}02.nc'
+        obs_file = fr'../../divide area/divided obs/ChangJiang/JSJ_obs_prec_rcm_{year}02.nc'
 
         case_data = nc.Dataset(case_file)
         cor_data = nc.Dataset(cor_file)
@@ -156,7 +163,8 @@ def cal_measurement():
 
         plt.colorbar(subfig, ax=[ax1, ax2, ax3], orientation="horizontal")
 
-        plt.savefig(f"../result/{year}02")
+        os.makedirs(fr'../result/{model_name}-result', exist_ok=True)
+        plt.savefig(f"../result/{model_name}-result/{year}02")
         plt.close()
 
     print(len(cors))
@@ -167,16 +175,17 @@ def cal_measurement():
     corr_tcc = utils.OtherUtils.cal_TCC(cors, obses)  # 订正后与真实值
     case_tcc = utils.OtherUtils.cal_TCC(cases, obses)  # 订正前与真实值
     tcc_img = utils.PaintUtils.paint_TCC(case_tcc, corr_tcc)
-    tcc_img.savefig(rf"../result/TCC-JSJ_91-19年2月-{model_name}")
+    tcc_img.savefig(rf"../result/{model_name}-result/TCC-JSJ_91-19年2月-{model_name}")
     print("tcc已保存")
     tcc_img.close()
 
     # ACC相关
-    corr_acc = utils.OtherUtils.cal_ACC(cors, obses, False)
-    case_acc = utils.OtherUtils.cal_ACC(cases, obses, False)
+    corr_acc = utils.OtherUtils.cal_ACC(cors, obses)
+    case_acc = utils.OtherUtils.cal_ACC(cases, obses)
     acc_img = utils.PaintUtils.paint_ACC(range(1991, 2020), case_acc, corr_acc)
-    acc_img.savefig(f"../result/ACC-JSJ_91-19年2月-{model_name}")
-    print("tcc已保存")
+    acc_img.savefig(f"../result/{model_name}-result/ACC-JSJ_91-19年2月-{model_name}")
+    print("acc已保存")
+    print(rf"../result/{model_name}-result/ACC-JSJ_91-19年2月-{model_name}")
     acc_img.close()
 
 

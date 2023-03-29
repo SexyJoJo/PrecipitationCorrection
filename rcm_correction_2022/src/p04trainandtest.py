@@ -11,6 +11,7 @@
 '''
 
 # here put the import lib
+import os
 import torch
 import torch.utils.data
 import numpy as np
@@ -84,12 +85,12 @@ class AreaModelTrainTest():
         self.__test_dataset = None
         self.__train_loader = None
         self.__test_loader = None
-        self.batch_size = 128
-        self.input_dim = 8 + 2  # 模型输入维度
+        self.batch_size = 1024
+        self.input_dim = 8  # 模型输入维度
         self.output_dim = 1  # 模型输出维度
-        self.num_layers = 3  # 隐层数量
-        self.hidden_dim = 64  # 隐层维度
-        self.epochs = 50
+        self.num_layers = 1  # 隐层数量
+        self.hidden_dim = 4  # 隐层维度
+        self.epochs = 250
         self.activation = 'tanh'  # 激活函数
         self.batchnormflag = False  # batch norm 标识
         self.droupoutflag = True  # dropout 标识
@@ -114,11 +115,11 @@ class AreaModelTrainTest():
             data_one_file = np.loadtxt(input_filename, delimiter='\t', skiprows=1)
             # 归一化, zsore: x' = (x -avg)/std
             assert normpara.shape[1] == data_one_file.shape[1], '列数量不一致'
-            assert data_one_file.shape[1] - 2 == self.input_dim + self.output_dim, '数据维度与模型结构不一致'
-            for ix in range(2, normpara.shape[1]):
+            assert data_one_file.shape[1] - 4 == self.input_dim + self.output_dim, '数据维度与模型结构不一致'
+            for ix in range(4, normpara.shape[1]):
                 data_one_file[:, ix] = (data_one_file[:, ix] - normpara[0, ix]) / normpara[1, ix]
 
-            data_one_x = data_one_file[:, 2:data_one_file.shape[1] - 1]
+            data_one_x = data_one_file[:, 4:data_one_file.shape[1] - 1]
             data_one_y = data_one_file[:, -1]
             if year == self.test_year:
                 test_data_x = data_one_x
@@ -155,8 +156,9 @@ class AreaModelTrainTest():
 
         best_model_loss = float('inf')
         # now = datetime.datetime.now()
-        model_desp = str(model)
-        model_save = f'../result/model-{self.area}-c{str(self.case_num).zfill(2)}' \
+        model_desp = str(model) + "除经纬度"
+        os.makedirs(rf"../result/{model_desp}", exist_ok=True)
+        model_save = f'../result/{model_desp}/model-{self.area}-c{str(self.case_num).zfill(2)}' \
                      f'-{self.case_date}-{self.case_time}' \
                      f'-y{self.test_year}' \
                      f'-{model_desp}.pth'
@@ -230,7 +232,7 @@ class AreaModelTrainTest():
 
 if __name__ == '__main__':
     # generate_norm_param()
-    for year in range(2010, 2020):
+    for year in range(1991, 2020):
         tt = AreaModelTrainTest(test_year=year)
         tt.organize_data()
         tt.train_test()

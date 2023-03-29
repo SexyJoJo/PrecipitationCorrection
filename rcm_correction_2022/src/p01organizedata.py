@@ -13,6 +13,7 @@
 # here put the import lib
 import netCDF4 as nc
 import numpy as np
+import calendar
 
 
 # 组装格点展平的一维数据文件
@@ -61,7 +62,7 @@ def p01gridpointdataset():
                 one_record.append(xlat_obs[row, col])
                 one_record.append(xlon_obs[row, col])
                 one_record.extend(pravg_case[:, row, col] * 3600 * 24)
-                one_record.append(pravg_obs[row, col])
+                one_record.append(pravg_obs[row, col] / 28)
                 print(one_record)
                 result.append(one_record)
 
@@ -108,7 +109,7 @@ def process_one_casefile(area='JSJ', case_num=1, case_year=1992,
                 one_record.append(xlat_obs[row, col])
                 one_record.append(xlon_obs[row, col])
                 one_record.extend(pravg_case[:, row, col] * 3600 * 24)
-                one_record.append(pravg_obs[row, col])
+                one_record.append(pravg_obs[row, col] / 28)
                 # print(one_record)
                 result.append(one_record)
     return result, pravg_case.shape[0]
