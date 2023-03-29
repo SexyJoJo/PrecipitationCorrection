@@ -2,7 +2,14 @@
 CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
-DATE = "0302"  # 预报日期
+# 输出根目录
+DESCRIPTION = "LSTM_CNN-原始值-minmax-batchsize4"
+LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
+MODEL_PATH = rf"./output/{DESCRIPTION}/models"
+RESULT_PATH = rf"./output/{DESCRIPTION}/results"
+EVALUATE_PATH = rf"./output/{DESCRIPTION}/评价指标"
+
+DATE = "0131"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
 
@@ -22,7 +29,7 @@ TRAIN_END_YEAR = 2019
 
 # 训练参数
 EPOCH = 600
-BATCH_SIZE = 28
+BATCH_SIZE = 4
 LR = 0.005
 
 # MODEL_PATH = r"91-18.pth"

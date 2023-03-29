@@ -1,3 +1,4 @@
+import calendar
 import os
 from datetime import datetime, timedelta
 
@@ -160,14 +161,17 @@ class ObsParser:
             return pravgs, remove_index
 
     @staticmethod
-    def get_one_2d_pravg(nc_path):
+    def get_one_2d_pravg(nc_path, year, month):
         """
         提取时间范围
+        :param year: 年份
+        :param month: 月
         :param nc_path:nc文件路径
         :return:
         """
         obs = netCDF4.Dataset(nc_path)
-        pravg = obs.variables["prec"][:] / 30  # 转换单位为mm/day
+        day_cnt = calendar.monthrange(int(year), int(month))[1]
+        pravg = obs.variables["prec"][:] / day_cnt  # 转换单位为mm/day
         pravg = ObsParser.fill_na(pravg)
         return pravg
 
@@ -200,14 +204,14 @@ class ObsParser:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
             # 若case不为12月且月份列表顺序
             elif is_sorted and months[0] != 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
             # 若月份列表非顺序
             elif not is_sorted:
@@ -219,7 +223,7 @@ class ObsParser:
                     else:
                         filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
 
-                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename))
+                    pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
 
             pravgs.append(curr_year_pravg)
@@ -254,7 +258,7 @@ class ObsParser:
                     na_list = []
                     nc_path = os.path.join(root, file)
                     obs = netCDF4.Dataset(nc_path)
-                    pravg = obs.variables["prec"][:] / 30
+                    pravg = obs.variables["prec"][:]
                     for i in range(len(pravg)):
                         for j in range(len(pravg[i])):
                             if isinstance(pravg[i][j], np.ma.core.MaskedConstant):
@@ -304,69 +308,120 @@ class OtherUtils:
         return start + delta
 
     @staticmethod
-    def cal_TCC(predicts, obses):
+    def cal_TCC(cases, obses):
         """
         计算时间相关系数TCC
-        :param predicts: 预测值， 维度：[年份， 预测值]
+        :param cases: 预测值， 维度：[年份， 预测值]
         :param obses: 对应预测值的观测值， 维度：[年份， 观测值]
         :return: TCC(二维 一个格点对应一个值)
         """
-        avg_pre = np.mean(predicts, axis=0)
+        avg_case = np.mean(cases, axis=0)
         avg_obs = np.mean(obses, axis=0)
 
         # TCC公式分子
-        molecular = np.zeros(predicts[0].shape)
+        molecular = np.zeros(cases[0].shape)
         # 分母左半边， 分母右半边
-        denominator_left, denominator_right = np.zeros(predicts[0].shape), np.zeros(predicts[0].shape)
+        denominator_left, denominator_right = np.zeros(cases[0].shape), np.zeros(cases[0].shape)
 
-        for i in range(len(predicts)):
-            molecular += (predicts[i] - avg_pre) * (obses[i] - avg_obs)
-            denominator_left += np.square(predicts[i] - avg_pre)
+        for i in range(len(cases)):
+            molecular += (cases[i] - avg_case) * (obses[i] - avg_obs)
+            denominator_left += np.square(cases[i] - avg_case)
             denominator_right += np.square(obses[i] - avg_obs)
 
         TCC = molecular / np.sqrt(denominator_left * denominator_right)
+
+        # shape = cases[0].shape
+        # x, y = [], []
+        # for year in range(len(cases)):
+        #     case = cases[year].flatten()
+        #     obs = obses[year].flatten()
+        #     x.append(case)
+        #     y.append(obs)
+        # x, y = np.array(x), np.array(y)
+        #
+        # TCCs = []
+        # for i in range(x.shape[1]):     # shape[1]: 格点数
+        #     case_avg = np.mean(x[:, i])
+        #     obs_avg = np.mean(y[:, i])
+        #     case_std = np.std(x[:, i])
+        #     obs_std = np.std(y[:, i])
+        #
+        #     sum = 0
+        #     for j in range(x.shape[0]):     # shape[0]: 年数
+        #         a = (x[j, i] - case_avg) * (y[j, i] - obs_avg)
+        #         if np.isnan(a):
+        #             continue
+        #         sum += a
+        #
+        #     tcc = (1 / x.shape[1] * sum) / (case_std * obs_std)
+        #     TCCs.append(tcc)
+        # TCCs = np.array(TCCs)
+        # TCCs = TCCs.reshape(shape)
         return TCC
 
     @staticmethod
-    def cal_ACC(corr_cases, test_obses, use_anomaly=True):
+    def cal_ACC(cases, obses, use_anomaly=True):
         """
         计算距平相关系数ACC
-        :param corr_cases: 所有年份的订正结果
-        :param test_obses: 所有年份订正结果对应的观测值
+        :param cases: 所有年份的订正结果
+        :param obses: 所有年份订正结果对应的观测值
         :param use_anomaly: 是否使用距平百分率，默认使用
         :return: ACC列表（一维 每个年份对应一个值）
         """
-        corr_cases = np.array(corr_cases)
-        test_obses = np.array(test_obses)
+        # corr_cases = np.array(corr_cases)
+        # test_obses = np.array(test_obses)
+        #
+        # if use_anomaly:
+        #     # 各个格点转为距平百分率
+        #     deltaRfs, deltaRos = [], []
+        #     for i in range(len(corr_cases)):
+        #         deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
+        #         deltaRfs.append(deltaRf)
+        #         deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)  # obs的距平百分率
+        #         deltaRos.append(deltaRo)
+        #
+        #     deltaRfs = np.array(deltaRfs)
+        #     avg_deltaRf = np.mean(deltaRfs, axis=0)
+        #     deltaRos = np.array(deltaRos)
+        #     avg_deltaRo = np.mean(deltaRos, axis=0)
+        # else:
+        #     deltaRfs = corr_cases
+        #     deltaRos = test_obses
+        # # i对应各预测年份
+        # ACCs = []
+        # for i in range(len(corr_cases)):
+        #     # ACC公式分子
+        #     avg_deltaRf = np.nanmean(deltaRfs[i])
+        #     avg_deltaRo = np.nanmean(deltaRos[i])
+        #
+        #     molecular = np.nansum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
+        #     denominator_left = np.nansum(np.square(deltaRfs[i] - avg_deltaRf))
+        #     denominator_right = np.nansum(np.square(deltaRos[i] - avg_deltaRo))
+        #     ACC = molecular / np.sqrt(denominator_left * denominator_right)
+        #     ACCs.append(ACC)
 
-        if use_anomaly:
-            # 各个格点转为距平百分率
-            deltaRfs, deltaRos = [], []
-            for i in range(len(corr_cases)):
-                deltaRf = OtherUtils.cal_anomaly_percentage(corr_cases[i], corr_cases)  # 预测的距平百分率
-                deltaRfs.append(deltaRf)
-                deltaRo = OtherUtils.cal_anomaly_percentage(test_obses[i], test_obses)  # obs的距平百分率
-                deltaRos.append(deltaRo)
-
-            deltaRfs = np.array(deltaRfs)
-            avg_deltaRf = np.mean(deltaRfs, axis=0)
-            deltaRos = np.array(deltaRos)
-            avg_deltaRo = np.mean(deltaRos, axis=0)
-        else:
-            deltaRfs = corr_cases
-            deltaRos = test_obses
-        # i对应各预测年份
         ACCs = []
-        for i in range(len(corr_cases)):
-            # ACC公式分子
-            avg_deltaRf = np.nanmean(deltaRfs[i])
-            avg_deltaRo = np.nanmean(deltaRos[i])
+        for year in range(len(cases)):
+            case = cases[year].flatten()
+            obs = obses[year].flatten()
+            nan_mask1 = np.isnan(case)
+            nan_mask2 = np.isnan(obs)
+            case = case[~nan_mask1]
+            obs = obs[~nan_mask2]
+            point_num = len(obs)
 
-            molecular = np.nansum((deltaRfs[i] - avg_deltaRf) * (deltaRos[i] - avg_deltaRo))
-            denominator_left = np.nansum(np.square(deltaRfs[i] - avg_deltaRf))
-            denominator_right = np.nansum(np.square(deltaRos[i] - avg_deltaRo))
-            ACC = molecular / np.sqrt(denominator_left * denominator_right)
-            ACCs.append(ACC)
+            case_avg = np.mean(case)
+            obs_avg = np.mean(obs)
+            case_std = np.std(case)
+            obs_std = np.std(obs)
+
+            sum = 0
+            for i in range(point_num):
+                a = (case[i] - case_avg) * (obs[i] - obs_avg)
+                sum += a
+
+            acc = (1 / point_num * sum) / (case_std * obs_std)
+            ACCs.append(acc)
         return ACCs
 
     @staticmethod
@@ -549,4 +604,27 @@ class PaintUtils:
         plt.close()
         # plt.legend(loc='lower right')
         return plt
+
+    @staticmethod
+    def paint_result(title, img_path, input, output, label):
+        plt.rcParams['font.family'] = ['SimHei']
+        fig = plt.figure()
+        fig.suptitle(title)
+        ax1 = fig.add_subplot(1, 3, 1)
+        ax2 = fig.add_subplot(1, 3, 2)
+        ax3 = fig.add_subplot(1, 3, 3)
+
+        norm = matplotlib.colors.Normalize(vmin=0, vmax=10)
+        ax1.set_title("订正前")
+        subfig = ax1.imshow(np.flip(input.numpy(), axis=0), norm=norm)
+        ax2.set_title("订正后")
+        ax2.imshow(np.flip(output.numpy(), axis=0), norm=norm)
+        ax3.set_title("obs")
+        ax3.imshow(np.flip(label.numpy(), axis=0), norm=norm)
+        plt.colorbar(subfig, ax=[ax1, ax2, ax3], orientation="horizontal")
+
+        os.makedirs(img_path, exist_ok=True)
+        plt.savefig(f"{img_path}/{title}")
+        plt.close()
+
 
