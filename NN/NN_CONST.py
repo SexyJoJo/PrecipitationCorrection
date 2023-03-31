@@ -3,7 +3,7 @@ CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
-DESCRIPTION = "LSTM_CNN-原始值-minmax-batchsize4"
+DESCRIPTION = "LSTM_CNN-原始值-zscore"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"
@@ -28,8 +28,10 @@ TRAIN_END_YEAR = 2019
 # JUMP_YEAR = 2019
 
 # 训练参数
-EPOCH = 600
-BATCH_SIZE = 4
+# NORMALIZATION = "minmax"
+NORMALIZATION = "zscore"
+EPOCH = 500
+BATCH_SIZE = 28
 LR = 0.005
 
 # MODEL_PATH = r"91-18.pth"

@@ -15,7 +15,7 @@ MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 
 def test():
     na_list = utils.ObsParser.get_na_index(OBS_DIR, AREA)
-    syear, eyear = 1991, 2001
+    syear, eyear = 1991, 2019
     for i in range(len(MONTHS)):
         corr_cases, test_cases, test_obses = [], [], []
         for test_year in range(syear, eyear):
@@ -40,13 +40,21 @@ def test():
                     outputs = model(inputs)
 
                     # 反归一化
-                    outputs = OtherUtils.min_max_denormalization(outputs, tensor_min, tensor_max)
-                    inputs = OtherUtils.min_max_denormalization(inputs, tensor_min, tensor_max)
-                    labels = OtherUtils.min_max_denormalization(labels, tensor_min, tensor_max)
+                    if NORMALIZATION == 'minmax':
+                        outputs = OtherUtils.min_max_denormalization(outputs, tensor_min, tensor_max)
+                        inputs = OtherUtils.min_max_denormalization(inputs, tensor_min, tensor_max)
+                        labels = OtherUtils.min_max_denormalization(labels, tensor_min, tensor_max)
+                    elif NORMALIZATION == 'zscore':
+                        outputs = OtherUtils.zscore_denormalization(
+                            outputs, train_dataset.obs_means, train_dataset.obs_stds)
+                        inputs = OtherUtils.zscore_denormalization(
+                            inputs, train_dataset.case_means, train_dataset.case_stds)
+                        labels = OtherUtils.zscore_denormalization(
+                            labels, train_dataset.obs_means, train_dataset.obs_stds)
 
                     print(f"{test_year}年{MONTHS[i]}月")
-                    print("订正前mse", utils.OtherUtils.mse(inputs, labels))
-                    print("订正后mse", utils.OtherUtils.mse(outputs, labels))
+                    print("订正前mse", utils.OtherUtils.cal_mse(inputs, labels))
+                    print("订正后mse", utils.OtherUtils.cal_mse(outputs, labels))
 
                     # 添加当前月全部年份的输入、输出、标签用于计算评价指标
                     test_case = inputs[0][i].cpu().numpy()

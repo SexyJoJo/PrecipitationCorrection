@@ -98,8 +98,8 @@ def single_train():
     uqdm = QDM(case, obs)
     model = uqdm.predict(test_case)  # 得到订正后的y
 
-    print("mse(obs, case):", mse(obs, case))
-    print("mse(test_obs, model):", mse(test_obs, model))
+    print("cal_mse(obs, case):", mse(obs, case))
+    print("cal_mse(test_obs, model):", mse(test_obs, model))
     print("np.corrcoef(obs, case):", np.corrcoef(obs, case))
     print("np.corrcoef(test_obs, model):", np.corrcoef(test_obs, model))
 
@@ -141,8 +141,8 @@ def loop_train():
 
         print("---------------------")
         print(f"year range:{syear}-{syear+4}")
-        print("mse(obs, case):", mse(obs, case))
-        print("mse(test_obs, model):", mse(test_obs, corr_case))
+        print("cal_mse(obs, case):", mse(obs, case))
+        print("cal_mse(test_obs, model):", mse(test_obs, corr_case))
         print("np.corrcoef(obs, case):", np.corrcoef(obs, case))
         print("np.corrcoef(test_obs, model):", np.corrcoef(test_obs, corr_case))
 

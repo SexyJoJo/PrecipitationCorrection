@@ -443,8 +443,32 @@ class OtherUtils:
         return two_d
 
     @staticmethod
-    def mse(y1, y2):
+    def cal_mse(y1, y2):
         return (np.square(y1 - y2)).mean()
+
+    @staticmethod
+    def cal_mean_std(data):
+        """计算各月均值与标准差"""
+        means = []
+        stds = []
+        for m in range(data.shape[1]):
+            means.append(torch.mean(data[:, m, :, :]))
+            stds.append(torch.std(data[:, m, :, :]))
+        return means, stds
+
+    @staticmethod
+    def zscore_normalization(tensor, means, stds):
+        """Z-Score归一化（各月）"""
+        for m in range(tensor.shape[1]):
+            tensor[:, m, :, :] = (tensor[:, m, :, :] - means[m]) / stds[m]
+        return tensor
+
+    @staticmethod
+    def zscore_denormalization(tensor, means, stds):
+        """Z-Score归一化（各月）"""
+        for m in range(tensor.shape[1]):
+            tensor[:, m, :, :] = tensor[:, m, :, :] * stds[m] + means[m]
+        return tensor
 
     @staticmethod
     def min_max_normalization(tensor, tensor_min, tensor_max):

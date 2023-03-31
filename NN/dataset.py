@@ -1,5 +1,4 @@
 import os
-
 from torch.utils.data import Dataset
 from NN_CONST import *
 import torch
@@ -20,10 +19,16 @@ class TrainDataset(Dataset):
             utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR))
 
         # 归一化
+        self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(self.case_data)
+        self.obs_means, self.obs_stds = utils.OtherUtils.cal_mean_std(self.obs_data)
         self.min = torch.min(self.case_data)
         self.max = torch.max(self.case_data)
-        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.min, self.max)
-        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.min, self.max)
+        if NORMALIZATION == 'zscore':
+            self.case_data = utils.OtherUtils.zscore_normalization(self.case_data, self.case_means, self.case_stds)
+            self.obs_data = utils.OtherUtils.zscore_normalization(self.obs_data, self.obs_means, self.obs_stds)
+        elif NORMALIZATION == 'minmax':
+            self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.min, self.max)
+            self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.min, self.max)
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -41,8 +46,16 @@ class TestDataset(Dataset):
             utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, train_dataset.months))
 
         # 归一化
-        self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, train_dataset.min, train_dataset.max)
-        self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, train_dataset.min, train_dataset.max)
+        if NORMALIZATION == 'zscore':
+            self.case_data = utils.OtherUtils.zscore_normalization(
+                self.case_data, train_dataset.case_means, train_dataset.case_stds)
+            self.obs_data = utils.OtherUtils.zscore_normalization(
+                self.obs_data, train_dataset.obs_means, train_dataset.obs_stds)
+        elif NORMALIZATION == 'minmax':
+            self.case_data = utils.OtherUtils.min_max_normalization(
+                self.case_data, train_dataset.min, train_dataset.max)
+            self.obs_data = utils.OtherUtils.min_max_normalization(
+                self.obs_data, train_dataset.min, train_dataset.max)
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
