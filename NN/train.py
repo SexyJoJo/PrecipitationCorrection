@@ -27,6 +27,7 @@ def train():
     total_training_loss_list = []  # 用于绘制损失趋势图
     total_test_loss_list = []
 
+    min_loss = 999999
     for epoch in range(EPOCH):
         # 模型训练
         total_training_loss = 0.
@@ -55,6 +56,10 @@ def train():
                 test_outputs = model(test_inputs)
                 test_loss = criterion(test_outputs, test_labels)
                 total_test_loss += test_loss.item()
+                # 查找损失最小模型
+                if total_test_loss < min_loss:
+                    min_loss = total_test_loss
+                    best_model = model
                 total_test_loss_list.append(total_test_loss)
                 print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
                       f"total_testing_loss:{total_test_loss}")
@@ -67,6 +72,7 @@ def train():
     os.makedirs(LOSS_PATH, exist_ok=True)
     plt.savefig(LOSS_PATH + rf"/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年损失(除{test_year}).png")
     plt.close()
+    return best_model
 
 
 if __name__ == '__main__':
@@ -92,7 +98,7 @@ if __name__ == '__main__':
         logging.debug(f"开始训练1991-2019年模型({test_year}年除外)")
         print(f"开始训练1991-2019年模型({test_year}年除外)")
         start = datetime.now()
-        train()
+        best_model = train()
         end = datetime.now()
         logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
@@ -100,6 +106,6 @@ if __name__ == '__main__':
         os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
         model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
                                   rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
-        torch.save(model.state_dict(), model_path)
+        torch.save(best_model.state_dict(), model_path)
         print("保存模型文件:", model_path)
 
