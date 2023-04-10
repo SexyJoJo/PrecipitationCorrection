@@ -1,4 +1,6 @@
 import os
+
+import numpy as np
 from torch.utils.data import Dataset
 from NN_CONST import *
 import torch
@@ -11,24 +13,34 @@ OBS_DIR = os.path.join(OBS_DIR, BASIN)
 class TrainDataset(Dataset):
     def __init__(self, JUMP_YEAR):
         super().__init__()
-        self.case_data = torch.Tensor(
-            utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR))
+        self.invalid_girds, self.valid_grids = utils.ObsParser.get_na_index(OBS_DIR, AREA)
+
+        self.case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)
         self.shape = self.case_data.shape
         self.months = utils.OtherUtils.get_predict_months(DATE, self.shape[1])
-        self.obs_data = torch.Tensor(
-            utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR))
+        self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months,
+                                                          JUMP_YEAR)
+        for i, j in self.invalid_girds:
+            self.case_data[:, :, i, j] = np.nan
+            self.obs_data[:, :, i, j] = np.nan
 
         # 归一化
         self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(self.case_data)
         self.obs_means, self.obs_stds = utils.OtherUtils.cal_mean_std(self.obs_data)
-        self.min = torch.min(self.case_data)
-        self.max = torch.max(self.case_data)
+        self.min = np.min(self.case_data)
+        self.max = np.max(self.case_data)
         if NORMALIZATION == 'zscore':
             self.case_data = utils.OtherUtils.zscore_normalization(self.case_data, self.case_means, self.case_stds)
             self.obs_data = utils.OtherUtils.zscore_normalization(self.obs_data, self.obs_means, self.obs_stds)
         elif NORMALIZATION == 'minmax':
             self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.min, self.max)
             self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.min, self.max)
+
+        # 数据维度转换
+        if DATA_FORMAT == 'grid':
+            self.case_data = utils.OtherUtils.map2grid(self.case_data, self.valid_grids, self.shape[0])
+            self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
+            self.obs_data = self.obs_data[:, 0: 1]
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -44,6 +56,7 @@ class TestDataset(Dataset):
             utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
         self.obs_data = torch.Tensor(
             utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, train_dataset.months))
+        self.shape = self.case_data.shape
 
         # 归一化
         if NORMALIZATION == 'zscore':
@@ -56,6 +69,12 @@ class TestDataset(Dataset):
                 self.case_data, train_dataset.min, train_dataset.max)
             self.obs_data = utils.OtherUtils.min_max_normalization(
                 self.obs_data, train_dataset.min, train_dataset.max)
+
+        # 数据维度转换
+        if DATA_FORMAT == 'grid':
+            self.case_data = utils.OtherUtils.map2grid(self.case_data, train_dataset.valid_grids, self.shape[0])
+            self.obs_data = utils.OtherUtils.map2grid(self.obs_data, train_dataset.valid_grids, self.shape[0])
+            self.obs_data = self.obs_data[:, 0: 1]
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]

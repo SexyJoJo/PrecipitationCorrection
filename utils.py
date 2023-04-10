@@ -203,14 +203,14 @@ class ObsParser:
             if months[0] == 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
-                    filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+                    filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
             # 若case不为12月且月份列表顺序
             elif is_sorted and months[0] != 1:
                 for month in months:
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
-                    filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                    filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"  # 年份无需特殊处理
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
             # 若月份列表非顺序
@@ -219,9 +219,9 @@ class ObsParser:
                 for i, month in enumerate(months):
                     month = "0" + str(month) if len(str(month)) == 1 else str(month)
                     if i <= split_point:
-                        filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"    # 年份无需特殊处理
+                        filename = area + "_obs_prec_rcm_" + str(year) + month + ".nc"  # 年份无需特殊处理
                     else:
-                        filename = area + "_obs_prec_rcm_" + str(year+1) + month + ".nc"    # 年份加1
+                        filename = area + "_obs_prec_rcm_" + str(year + 1) + month + ".nc"  # 年份加1
 
                     pravg = ObsParser.get_one_2d_pravg(os.path.join(nc_dir, filename), year, month)
                     curr_year_pravg.append(pravg)
@@ -255,7 +255,7 @@ class ObsParser:
         for root, _, files in os.walk(nc_dir):
             for file in files:
                 if file.startswith(area):
-                    na_list = []
+                    na_list, valid_list = [], []
                     nc_path = os.path.join(root, file)
                     obs = netCDF4.Dataset(nc_path)
                     pravg = obs.variables["prec"][:]
@@ -263,7 +263,9 @@ class ObsParser:
                         for j in range(len(pravg[i])):
                             if isinstance(pravg[i][j], np.ma.core.MaskedConstant):
                                 na_list.append((i, j))
-                    return na_list
+                            else:
+                                valid_list.append((i, j))
+                    return na_list, valid_list
 
     @staticmethod
     def get_filetime(filename):
@@ -443,8 +445,16 @@ class OtherUtils:
         return two_d
 
     @staticmethod
+    def map2grid(data, valid_girds, year_cnt):
+        samples = []
+        for year in range(year_cnt):
+            for i, j in valid_girds:
+                samples.append(data[year, :, i, j].tolist())
+        return torch.Tensor(samples)
+
+    @staticmethod
     def cal_mse(y1, y2):
-        return (np.square(y1 - y2)).mean()
+        return np.nanmean(np.square(y1 - y2))
 
     @staticmethod
     def cal_mean_std(data):
@@ -452,8 +462,8 @@ class OtherUtils:
         means = []
         stds = []
         for m in range(data.shape[1]):
-            means.append(torch.mean(data[:, m, :, :]))
-            stds.append(torch.std(data[:, m, :, :]))
+            means.append(np.nanmean(data[:, m, :, :]))
+            stds.append(np.nanstd(data[:, m, :, :]))
         return means, stds
 
     @staticmethod
@@ -464,10 +474,14 @@ class OtherUtils:
         return tensor
 
     @staticmethod
-    def zscore_denormalization(tensor, means, stds):
+    def zscore_denormalization(tensor, means, stds, data_format):
         """Z-Score归一化（各月）"""
-        for m in range(tensor.shape[1]):
-            tensor[:, m, :, :] = tensor[:, m, :, :] * stds[m] + means[m]
+        if data_format == 'map':
+            for m in range(tensor.shape[1]):
+                tensor[:, m, :, :] = tensor[:, m, :, :] * stds[m] + means[m]
+        elif data_format == 'grid':
+            for m in range(tensor.shape[0]):
+                tensor[m] = tensor[m] * stds[m] + means[m]
         return tensor
 
     @staticmethod
@@ -650,5 +664,3 @@ class PaintUtils:
         os.makedirs(img_path, exist_ok=True)
         plt.savefig(f"{img_path}/{title}")
         plt.close()
-
-

@@ -81,3 +81,23 @@ class LSTM_CNN(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         return x
+
+
+class ANN(nn.Module):
+    def __init__(self, shape):
+        super(ANN, self).__init__()
+
+        self.fc1 = nn.Linear(shape[1], 4, bias=True)
+        self.fc2 = nn.Linear(4, 4, bias=True)
+        self.fc3 = nn.Linear(4, 1, bias=True)
+        self.tanh = nn.Tanh()  # 双曲正切激活函数
+        self.dropout = nn.Dropout(p=0.5, inplace=False)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.tanh(x)
+        x = self.fc2(x)
+        x = self.dropout(x)
+        x = self.tanh(x)
+        x = self.fc3(x)
+        return x

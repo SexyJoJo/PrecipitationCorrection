@@ -1,19 +1,15 @@
 """模型搭建与训练"""
 import os.path
-
 from matplotlib import pyplot as plt
-
 from model import *
 from dataset import *
 from datetime import datetime
 import logging
 import numpy as np
 import torch
-
 from torch.utils.data import DataLoader
-import utils
 from NN_CONST import *
-
+from visdom import Visdom
 
 # def setup_seed(seed):
 #     torch.manual_seed(seed)
@@ -24,45 +20,62 @@ from NN_CONST import *
 
 
 def train():
+    viz = Visdom(env=f'{str(model)}')
+    # 窗口初始化
+    viz.line([0.], [0], win='train_loss', opts=dict(title='train_loss'))
+    viz.line([[0., 0.]], [0],
+             win='tt_loss', update='append',
+             opts=dict(title='train_test_loss', lenend=['trainloss', 'testloss']))
+
     total_training_loss_list = []  # 用于绘制损失趋势图
     total_test_loss_list = []
+    loss_list = []
 
     min_loss = 999999
     for epoch in range(EPOCH):
         # 模型训练
-        total_training_loss = 0.
+        training_loss = 0.
+        loss_epoch = []
         for i, data in enumerate(train_dataloader, 0):
             inputs, target = data
             inputs, target = inputs.to(device), target.to(device)
-            optimizer.zero_grad()
-
             outputs = model(inputs)
-
-            training_loss = criterion(outputs, target)
-            total_training_loss += training_loss.item()
-            if i + 1 == 28 / BATCH_SIZE:
-                total_training_loss_list.append(total_training_loss)
-            print(f"epoch:{epoch}  i:{i}   training_loss:{training_loss.item()}  "
-                  f"total_training_loss:{total_training_loss}")
-            training_loss.backward()
+            loss = criterion(outputs, target)
+            optimizer.zero_grad()
+            loss.backward()
             optimizer.step()
+            training_loss += loss.item()
+            print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}  "
+                  f"total_training_loss:{training_loss}")
+        training_one_loss = training_loss / len(train_dataloader)
+        loss_epoch.append(training_one_loss)
 
         # 模型验证
-        total_test_loss = 0.
+        model.eval()
+        testing_loss = 0.
         with torch.no_grad():
             for data in test_dataloader:
                 test_inputs, test_labels = data
                 test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
                 test_outputs = model(test_inputs)
                 test_loss = criterion(test_outputs, test_labels)
-                total_test_loss += test_loss.item()
-                # 查找损失最小模型
-                if total_test_loss < min_loss:
-                    min_loss = total_test_loss
-                    best_model = model
-                total_test_loss_list.append(total_test_loss)
-                print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
-                      f"total_testing_loss:{total_test_loss}")
+                testing_loss += test_loss.item()
+
+        testing_loss = testing_loss / len(test_dataloader)
+        loss_epoch.append(testing_loss)
+        # 查找损失最小模型
+        if testing_loss < min_loss:
+            min_loss = testing_loss
+            best_model = model
+
+        viz.line([[training_one_loss, testing_loss]], [epoch],
+                 win=f'tt_loss_{test_year}', update='append',
+                 opts=dict(title=f'train_test_loss_{test_year}', lenend=['trainloss', 'testloss']))
+        print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
+              f"total_testing_loss:{testing_loss}")
+
+        total_training_loss_list.append(training_loss)
+        total_test_loss_list.append(testing_loss)
 
     # 绘制损失图
     plt.plot(list(range(EPOCH)), total_training_loss_list, label="total training loss")
@@ -83,12 +96,12 @@ if __name__ == '__main__':
     for test_year in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
         # 加载训练集
         train_dataset = TrainDataset(test_year)
-        train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE)
+        train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         # 加载测试集 用于查看损失
         test_dataset = TestDataset(test_year, test_year, train_dataset)
-        test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
+        test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型
-        model = LSTM_CNN(train_dataset.shape)
+        model = ANN(train_dataset.shape)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         criterion = torch.nn.MSELoss()
