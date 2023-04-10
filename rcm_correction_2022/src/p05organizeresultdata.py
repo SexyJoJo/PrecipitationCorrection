@@ -31,7 +31,7 @@ def organize_result_data(year=1991):
     area = 'JSJ'
     obs_month = 2
     begin_index = 4  # 列下标从2开始，包含经纬度；如果设置为4，则跳过经纬度
-    model_name = 'ann-l1h4-tanh-bn0-dp1'
+    model_name = 'ann-l1h4-tanh-bn0-dp1除经纬度'
     # 1、提取模型
     model_file = f'../result/{model_name}/model-{area}-c01-0131-00-y{year}-{model_name}.pth'
     # model_file = f'../result/{model_name}/model-{area}-c01-0131-00-y{year}-{model_name}.pth'
@@ -190,8 +190,8 @@ def cal_measurement():
 
 
 if __name__ == '__main__':
-    # for i in range(1991, 2020):
-    #     organize_result_data(year=i)
+    for i in range(1991, 2020):
+        organize_result_data(year=i)
 
     cal_measurement()
 

@@ -31,7 +31,7 @@ def generate_norm_param():
     obs_month = 2
 
     data_all = []
-    for case_year in range(1991, 2020):
+    for case_year in range(1992, 2020):
         # 处理单个文件
         input_filename = rf'../../divide area/data/202301-gridpoint/' \
                          rf'{area}_point_PRAVG_{case_year}{case_date}{case_time}c{str(case_num).zfill(2)}_{case_year}_monthly.txt'
