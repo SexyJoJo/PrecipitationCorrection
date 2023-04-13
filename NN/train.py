@@ -11,42 +11,38 @@ from torch.utils.data import DataLoader
 from NN_CONST import *
 from visdom import Visdom
 
-# def setup_seed(seed):
-#     torch.manual_seed(seed)
-#     torch.cuda.manual_seed_all(seed)
-#     np.random.seed(seed)
-#     random.seed(seed)
-#     torch.backends.cudnn.deterministic = True
+
+torch.manual_seed(42)
 
 
 def train():
-    viz = Visdom(env=f'{str(model)}')
+    viz = Visdom(env='PR')
     # 窗口初始化
-    viz.line([0.], [0], win='train_loss', opts=dict(title='train_loss'))
-    viz.line([[0., 0.]], [0],
-             win='tt_loss', update='append',
-             opts=dict(title='train_test_loss', lenend=['trainloss', 'testloss']))
+    # viz.line([0.], [0], win='train_loss', opts=dict(title='train_loss'))
+    # viz.line([[0., 0.]], [0],
+    #          win='tt_loss', update='append',
+    #          opts=dict(title='train_test_loss', legend=['trainloss', 'testloss']))
 
     total_training_loss_list = []  # 用于绘制损失趋势图
     total_test_loss_list = []
-    loss_list = []
 
-    min_loss = 999999
+    best_model_loss = float('inf')
     for epoch in range(EPOCH):
         # 模型训练
+        model.train()
         training_loss = 0.
         loss_epoch = []
-        for i, data in enumerate(train_dataloader, 0):
+        for i, data in enumerate(train_dataloader):
             inputs, target = data
-            inputs, target = inputs.to(device), target.to(device)
+            # inputs, target = inputs.to(device), target.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, target)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             training_loss += loss.item()
-            print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}  "
-                  f"total_training_loss:{training_loss}")
+            # print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}  "
+            #       f"total_training_loss:{training_loss}")
         training_one_loss = training_loss / len(train_dataloader)
         loss_epoch.append(training_one_loss)
 
@@ -56,23 +52,29 @@ def train():
         with torch.no_grad():
             for data in test_dataloader:
                 test_inputs, test_labels = data
-                test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
+                # test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
                 test_outputs = model(test_inputs)
                 test_loss = criterion(test_outputs, test_labels)
-                testing_loss += test_loss.item()
+                testing_loss += test_loss
 
-        testing_loss = testing_loss / len(test_dataloader)
+        testing_loss = testing_loss.item() / len(test_dataloader)
         loss_epoch.append(testing_loss)
+
         # 查找损失最小模型
-        if testing_loss < min_loss:
-            min_loss = testing_loss
-            best_model = model
+        os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
+        model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
+                                  rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
+        if testing_loss < best_model_loss:
+            best_model_loss = testing_loss
+            torch.save(model, model_path, _use_new_zipfile_serialization=False)
 
         viz.line([[training_one_loss, testing_loss]], [epoch],
                  win=f'tt_loss_{test_year}', update='append',
-                 opts=dict(title=f'train_test_loss_{test_year}', lenend=['trainloss', 'testloss']))
-        print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
-              f"total_testing_loss:{testing_loss}")
+                 opts=dict(title=f'train_test_loss_{test_year}', legend=['trainloss', 'testloss']))
+        # print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
+        #       f"total_testing_loss:{testing_loss}")
+        for name, param in model.state_dict().items():
+            print(f"{name}: {param}")
 
         total_training_loss_list.append(training_loss)
         total_test_loss_list.append(testing_loss)
@@ -85,7 +87,7 @@ def train():
     os.makedirs(LOSS_PATH, exist_ok=True)
     plt.savefig(LOSS_PATH + rf"/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年损失(除{test_year}).png")
     plt.close()
-    return best_model
+    # return model
 
 
 if __name__ == '__main__':
@@ -102,8 +104,8 @@ if __name__ == '__main__':
         test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型
         model = ANN(train_dataset.shape)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device)
+        # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # model.to(device)
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
@@ -111,14 +113,7 @@ if __name__ == '__main__':
         logging.debug(f"开始训练1991-2019年模型({test_year}年除外)")
         print(f"开始训练1991-2019年模型({test_year}年除外)")
         start = datetime.now()
-        best_model = train()
+        train()
         end = datetime.now()
         logging.debug(f"模型训练完成,耗时:{end - start}")
         print("模型训练完成,耗时:", end - start)
-
-        os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
-                                  rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
-        torch.save(best_model.state_dict(), model_path)
-        print("保存模型文件:", model_path)
-

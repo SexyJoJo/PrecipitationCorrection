@@ -18,15 +18,18 @@ class TrainDataset(Dataset):
         self.case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)
         self.shape = self.case_data.shape
         self.months = utils.OtherUtils.get_predict_months(DATE, self.shape[1])
-        self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months,
-                                                          JUMP_YEAR)
+        self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR)
+        all_case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)
+        all_obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months)
         for i, j in self.invalid_girds:
             self.case_data[:, :, i, j] = np.nan
             self.obs_data[:, :, i, j] = np.nan
+            all_case_data[:, :, i, j] = np.nan
+            all_obs_data[:, :, i, j] = np.nan
 
         # 归一化
-        self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(self.case_data)
-        self.obs_means, self.obs_stds = utils.OtherUtils.cal_mean_std(self.obs_data)
+        self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(all_case_data)
+        self.obs_means, self.obs_stds = utils.OtherUtils.cal_mean_std(all_obs_data)
         self.min = np.min(self.case_data)
         self.max = np.max(self.case_data)
         if NORMALIZATION == 'zscore':
@@ -41,6 +44,7 @@ class TrainDataset(Dataset):
             self.case_data = utils.OtherUtils.map2grid(self.case_data, self.valid_grids, self.shape[0])
             self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
             self.obs_data = self.obs_data[:, 0: 1]
+            pass
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]

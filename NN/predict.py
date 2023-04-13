@@ -14,9 +14,12 @@ SHAPE = torch.Tensor(
 MONTHS = utils.OtherUtils.get_predict_months(DATE, 1)
 
 
+torch.manual_seed(42)
+
+
 def test():
     na_list, valid_grids = utils.ObsParser.get_na_index(OBS_DIR, AREA)
-    syear, eyear = 1991, 2019
+    syear, eyear = 1991, 2020
 
     if DATA_FORMAT == 'grid':
         for m in range(len(MONTHS)):
@@ -33,17 +36,19 @@ def test():
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False)
                 # 读取模型
                 # model = LSTM_CNN(train_dataset.shape)
-                model = ANN(train_dataset.shape)
+                # model = ANN(train_dataset.shape)
                 model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{test_year}年).pth"
-                model.load_state_dict(torch.load(model_path))
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                model = torch.load(model_path)
+                # model.load_state_dict(torch.load(model_path))
+                # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
                 # 预测test_year m月的各格点值
                 with torch.no_grad():
                     for cnt, data in enumerate(test_dataloader):
                         # 预测
                         inputs, labels = data
-                        inputs, labels = inputs.to(device), labels.to(device)
+                        # inputs, labels = inputs.to(device), labels.to(device)
+                        # inputs, labels = test_dataset.case_data, test_dataset.obs_data
                         outputs = model(inputs)
                         # 反归一化
                         if NORMALIZATION == 'minmax':

@@ -3,7 +3,7 @@ CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
-DESCRIPTION = "ANN-1h32-dp.5-原始值-zscore-最小损失模型-输入n月输出1月"
+DESCRIPTION = "ANN-1h4-dp.5-原始值-zscore-最小损失模型-输入n月输出1月"
 # DESCRIPTION = "LSTM_CNN-原始值-zscore-最小损失模型"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
@@ -35,6 +35,6 @@ DATA_FORMAT = 'grid'
 # DATA_FORMAT = 'map'
 EPOCH = 250
 BATCH_SIZE = 1024
-LR = 0.005
+LR = 0.001
 
 # MODEL_PATH = r"91-18.pth"
