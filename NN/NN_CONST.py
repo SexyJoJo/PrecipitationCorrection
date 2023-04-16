@@ -3,8 +3,8 @@ CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
+# DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
 DESCRIPTION = "ANN-1h4-dp.5-原始值-zscore-最小损失模型-输入n月输出1月"
-# DESCRIPTION = "LSTM_CNN-原始值-zscore-最小损失模型"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"
@@ -33,8 +33,8 @@ TRAIN_END_YEAR = 2019
 NORMALIZATION = "zscore"
 DATA_FORMAT = 'grid'
 # DATA_FORMAT = 'map'
-EPOCH = 250
-BATCH_SIZE = 1024
-LR = 0.001
+EPOCH = 150
+BATCH_SIZE = 28
+LR = 0.005
 
 # MODEL_PATH = r"91-18.pth"

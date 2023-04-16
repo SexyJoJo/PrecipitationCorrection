@@ -8,7 +8,6 @@ class LSTM_CNN(nn.Module):
         super(LSTM_CNN, self).__init__()
         self.shape = shape
 
-        # 输入[batch, 5,43,39]
         self.lstm = nn.LSTM(
             input_size=shape[2] * shape[3],
             hidden_size=shape[2] * shape[3],
@@ -32,28 +31,19 @@ class LSTM_CNN(nn.Module):
             nn.ReLU(),
             # nn.MaxPool2d(kernel_size=2)  # 经过最大值池化 输出传入下一个卷积
 
-            nn.Conv2d(
-                in_channels=16,  # 输入个数与上层输出一致
-                out_channels=32,
-                kernel_size=(3, 3),
-                stride=(1, 1),
-                padding=1
-            ),
-            nn.ReLU(),
-
-            nn.Conv2d(
-                in_channels=32,  # 输入个数与上层输出一致
-                out_channels=64,
-                kernel_size=(3, 3),
-                stride=(1, 1),
-                padding=1
-            ),
-            nn.ReLU(),
+            # nn.Conv2d(
+            #     in_channels=16,  # 输入个数与上层输出一致
+            #     out_channels=32,
+            #     kernel_size=(3, 3),
+            #     stride=(1, 1),
+            #     padding=1
+            # ),
+            # nn.ReLU(),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(
-                in_channels=64,  # 输入个数与上层输出一致
+                in_channels=16,  # 输入个数与上层输出一致
                 out_channels=shape[1],
                 kernel_size=(3, 3),
                 stride=(1, 1),

@@ -24,6 +24,8 @@ def test():
     if DATA_FORMAT == 'grid':
         for m in range(len(MONTHS)):
             corr_cases, test_cases, test_obses = [], [], []
+            anomaly_test_cases, anomaly_test_obses = [], []
+
             for test_year in range(syear, eyear):
                 # 输出数组初始化
                 inputs_map = np.zeros([SHAPE[2], SHAPE[3]]) + np.nan
@@ -82,6 +84,8 @@ def test():
                 test_cases.append(inputs_map)
                 corr_cases.append(outputs_map)
                 test_obses.append(labels_map)
+                anomaly_test_cases.append(inputs_map - train_dataset.case_grids_means[m])
+                anomaly_test_obses.append(labels_map - train_dataset.obs_grids_means[m])
 
                 # 保存结果图
                 fig_title = f"{TIME}-{BASIN}-{AREA}-{test_year}年{MONTHS[m]}月"
@@ -91,6 +95,7 @@ def test():
                                               torch.Tensor(outputs_map),
                                               torch.Tensor(labels_map))
 
+            anomaly_corr_cases = np.array(corr_cases) - np.mean(np.array(corr_cases), axis=0)
             # TCC相关
             tcc_path = EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"
             corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)  # 订正后与真实值
@@ -100,6 +105,12 @@ def test():
             tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             tcc_img.close()
+            corr_tcc = OtherUtils.cal_TCC(anomaly_corr_cases, anomaly_test_obses)  # 订正后与真实值
+            case_tcc = OtherUtils.cal_TCC(anomaly_test_cases, anomaly_test_obses)  # 订正前与真实值
+            tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
+            tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            tcc_img.close()
 
             # ACC相关
             acc_path = EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"
@@ -108,21 +119,29 @@ def test():
             acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
             os.makedirs(acc_path, exist_ok=True)
             acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
-            print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
+            print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
+            acc_img.close()
+            corr_acc = OtherUtils.cal_ACC(anomaly_corr_cases, anomaly_test_obses, False)
+            case_acc = OtherUtils.cal_ACC(anomaly_test_cases, anomaly_test_obses, False)
+            acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
+            acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             acc_img.close()
 
     elif DATA_FORMAT == 'map':
         for m in range(len(MONTHS)):
             corr_cases, test_cases, test_obses = [], [], []
+            anomaly_test_cases, anomaly_test_obses = [], []
             for test_year in range(syear, eyear):
                 train_dataset = TrainDataset(test_year)
                 # 加载测试集
                 test_dataset = TestDataset(test_year, test_year, train_dataset)
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
                 # 读取模型
-                model = LSTM_CNN(train_dataset.shape)
+                # model = LSTM_CNN(train_dataset.shape)
                 model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{test_year}年).pth"
-                model.load_state_dict(torch.load(model_path))
+                # model.load_state_dict(torch.load(model_path))
+                model = torch.load(model_path)
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
                 with torch.no_grad():
@@ -161,12 +180,15 @@ def test():
                         test_cases.append(test_case)
                         corr_cases.append(corr_case)
                         test_obses.append(test_obs)
+                        anomaly_test_cases.append(test_case - train_dataset.case_grids_means[m])
+                        anomaly_test_obses.append(test_obs - train_dataset.obs_grids_means[m])
 
                         # 保存结果图
                         fig_title = f"{TIME}-{BASIN}-{AREA}-{test_year}年{MONTHS[m]}月"
                         result_path = RESULT_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}"
                         utils.PaintUtils.paint_result(fig_title, result_path, inputs[0][m], outputs[0][m], labels[0][m])
 
+            anomaly_corr_cases = np.array(corr_cases) - np.mean(np.array(corr_cases), axis=0)
             # TCC相关
             tcc_path = EVALUATE_PATH + rf"/TCC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"
             corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)  # 订正后与真实值
@@ -176,6 +198,12 @@ def test():
             tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             tcc_img.close()
+            corr_tcc = OtherUtils.cal_TCC(anomaly_corr_cases, anomaly_test_obses)  # 订正后与真实值
+            case_tcc = OtherUtils.cal_TCC(anomaly_test_cases, anomaly_test_obses)  # 订正前与真实值
+            tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
+            tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            tcc_img.close()
 
             # ACC相关
             acc_path = EVALUATE_PATH + rf"/ACC/{DATE}/{CASE_NUM}/{TIME}/{BASIN}"
@@ -184,8 +212,15 @@ def test():
             acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
             os.makedirs(acc_path, exist_ok=True)
             acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
-            print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
+            print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
             acc_img.close()
+            corr_acc = OtherUtils.cal_ACC(anomaly_corr_cases, anomaly_test_obses, False)
+            case_acc = OtherUtils.cal_ACC(anomaly_test_cases, anomaly_test_obses, False)
+            acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
+            acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
+            acc_img.close()
+
 
 
 if __name__ == '__main__':

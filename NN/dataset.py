@@ -21,11 +21,17 @@ class TrainDataset(Dataset):
         self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR)
         all_case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)
         all_obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months)
+        # 去除异常值
         for i, j in self.invalid_girds:
             self.case_data[:, :, i, j] = np.nan
             self.obs_data[:, :, i, j] = np.nan
             all_case_data[:, :, i, j] = np.nan
             all_obs_data[:, :, i, j] = np.nan
+        self.case_grids_means = np.mean(all_case_data, axis=0)
+        self.obs_grids_means = np.mean(all_obs_data, axis=0)
+        if DATA_FORMAT == 'map':
+            self.case_data = np.nan_to_num(self.case_data, nan=0.0)
+            self.obs_data = np.nan_to_num(self.obs_data, nan=0.0)
 
         # 归一化
         self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(all_case_data)
@@ -44,7 +50,7 @@ class TrainDataset(Dataset):
             self.case_data = utils.OtherUtils.map2grid(self.case_data, self.valid_grids, self.shape[0])
             self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
             self.obs_data = self.obs_data[:, 0: 1]
-            pass
+
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]

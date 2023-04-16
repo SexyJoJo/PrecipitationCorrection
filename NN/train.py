@@ -41,8 +41,8 @@ def train():
             loss.backward()
             optimizer.step()
             training_loss += loss.item()
-            # print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}  "
-            #       f"total_training_loss:{training_loss}")
+            print(f"epoch:{epoch}  i:{i}   loss:{loss.item()}  "
+                  f"total_training_loss:{training_loss}")
         training_one_loss = training_loss / len(train_dataloader)
         loss_epoch.append(training_one_loss)
 
@@ -64,7 +64,7 @@ def train():
         os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
         model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
                                   rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
-        if testing_loss < best_model_loss:
+        if testing_loss < best_model_loss and epoch > 20:
             best_model_loss = testing_loss
             torch.save(model, model_path, _use_new_zipfile_serialization=False)
 
@@ -73,8 +73,8 @@ def train():
                  opts=dict(title=f'train_test_loss_{test_year}', legend=['trainloss', 'testloss']))
         # print(f"epoch:{epoch}   testing_loss:{test_loss.item()}  "
         #       f"total_testing_loss:{testing_loss}")
-        for name, param in model.state_dict().items():
-            print(f"{name}: {param}")
+        # for name, param in model.state_dict().items():
+        #     print(f"{name}: {param}")
 
         total_training_loss_list.append(training_loss)
         total_test_loss_list.append(testing_loss)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         test_dataset = TestDataset(test_year, test_year, train_dataset)
         test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型
-        model = ANN(train_dataset.shape)
+        model = LSTM_CNN(train_dataset.shape)
         # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # model.to(device)
         criterion = torch.nn.MSELoss()
