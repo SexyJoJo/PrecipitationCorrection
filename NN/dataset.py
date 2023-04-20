@@ -46,11 +46,15 @@ class TrainDataset(Dataset):
             self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.min, self.max)
 
         # 数据维度转换
-        if DATA_FORMAT == 'grid':
-            self.case_data = utils.OtherUtils.map2grid(self.case_data, self.valid_grids, self.shape[0])
-            self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
-            self.obs_data = self.obs_data[:, 0: 1]
-
+        if DATA_FORMAT.startswith('grid'):
+            if DATA_FORMAT.endswith('11'):
+                self.case_data = utils.OtherUtils.map2grid(self.case_data, self.valid_grids, self.shape[0])
+                self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
+                self.obs_data = self.obs_data[:, 0: 1]
+            elif DATA_FORMAT.endswith('33'):
+                self.case_data, self.valid_grids = utils.OtherUtils.map2grid33(self.case_data, self.valid_grids, self.shape[0])
+                self.obs_data = utils.OtherUtils.map2grid(self.obs_data, self.valid_grids, self.shape[0])
+                self.obs_data = self.obs_data[:, 0: 1]
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]
@@ -81,10 +85,19 @@ class TestDataset(Dataset):
                 self.obs_data, train_dataset.min, train_dataset.max)
 
         # 数据维度转换
-        if DATA_FORMAT == 'grid':
-            self.case_data = utils.OtherUtils.map2grid(self.case_data, train_dataset.valid_grids, self.shape[0])
-            self.obs_data = utils.OtherUtils.map2grid(self.obs_data, train_dataset.valid_grids, self.shape[0])
-            self.obs_data = self.obs_data[:, 0: 1]
+        if DATA_FORMAT.startswith('grid'):
+            if DATA_FORMAT.endswith('11'):
+                self.case_data = utils.OtherUtils.map2grid(
+                    self.case_data, train_dataset.valid_grids, self.shape[0])
+                self.obs_data = utils.OtherUtils.map2grid(
+                    self.obs_data, train_dataset.valid_grids, self.shape[0])
+                self.obs_data = self.obs_data[:, 0: 1]
+            elif DATA_FORMAT.endswith('33'):
+                self.case_data, self.valid_grids = utils.OtherUtils.map2grid33(
+                    self.case_data, train_dataset.valid_grids, self.shape[0])
+                self.obs_data = utils.OtherUtils.map2grid(
+                    self.obs_data, train_dataset.valid_grids, self.shape[0])
+                self.obs_data = self.obs_data[:, 0: 1]
 
     def __getitem__(self, index):
         return self.case_data[index], self.obs_data[index]

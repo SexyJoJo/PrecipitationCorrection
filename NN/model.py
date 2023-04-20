@@ -77,15 +77,9 @@ class ANN(nn.Module):
     def __init__(self, shape):
         super(ANN, self).__init__()
 
-        # self.fc1 = nn.Linear(shape[1], 4, bias=True)
-        # self.fc2 = nn.Linear(4, 4, bias=True)
-        # self.fc3 = nn.Linear(4, 1, bias=True)
-        # self.tanh = nn.Tanh()  # 双曲正切激活函数
-        # self.dropout = nn.Dropout(p=0.5, inplace=False)
-
         net = nn.Sequential()
         net.add_module(r'inputlayer',
-                       nn.Linear(in_features=8, out_features=4, bias=True))
+                       nn.Linear(in_features=shape[1], out_features=4, bias=True))
         net.add_module(r'inputact', nn.Tanh())
         net.add_module(rf'hidlayer-1',
                        nn.Linear(in_features=4, out_features=4, bias=True))
@@ -96,12 +90,26 @@ class ANN(nn.Module):
         self.net = net
 
     def forward(self, x):
-        # x = self.fc1(x)
-        # x = self.tanh(x)
-        # x = self.fc2(x)
-        # x = self.dropout(x)
-        # x = self.tanh(x)
-        # x = self.fc3(x)
+        x = self.net(x)
+        return x
 
+
+class ANN33(nn.Module):
+    def __init__(self, shape):
+        super(ANN33, self).__init__()
+
+        net = nn.Sequential()
+        net.add_module(r'inputlayer',
+                       nn.Linear(in_features=9 * shape[1], out_features=128, bias=True))
+        net.add_module(r'inputact', nn.Tanh())
+        net.add_module(rf'hidlayer-1',
+                       nn.Linear(in_features=128, out_features=64, bias=True))
+        # net.add_module(rf'drop-1', nn.Dropout())
+        net.add_module(rf'hidact-1', nn.Tanh())
+        net.add_module(r'outputlayer',
+                       nn.Linear(in_features=64, out_features=1, bias=True))
+        self.net = net
+
+    def forward(self, x):
         x = self.net(x)
         return x

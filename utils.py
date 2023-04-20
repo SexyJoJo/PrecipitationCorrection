@@ -453,6 +453,36 @@ class OtherUtils:
         return torch.Tensor(samples)
 
     @staticmethod
+    def map2grid33(data, valid_girds, year_cnt):
+        def get_neighbors(case_data, row, col):
+            neighbors = []
+            for r in range(row - 1, row + 2):
+                for c in range(col - 1, col + 2):
+                    if 0 <= r < len(case_data) and 0 <= c < len(case_data[0]):
+                        value = case_data[r][c]
+                        if np.isnan(value):
+                            return []
+                        neighbors.append(value)
+            if len(neighbors) == 9:  # 8邻居加上自身
+                return neighbors
+            else:
+                return []
+
+        samples = []
+        new_valid_girds = []
+        for year in range(year_cnt):
+            for i, j in valid_girds:
+                all_month_neighbors = []
+                for month in range(data.shape[1]):
+                    neighbors = get_neighbors(data[year][month], i, j)
+                    all_month_neighbors += neighbors
+                if len(all_month_neighbors) != 0:
+                    samples.append(all_month_neighbors)
+                    if (i, j) not in new_valid_girds:
+                        new_valid_girds.append((i, j))
+        return torch.Tensor(samples), new_valid_girds
+
+    @staticmethod
     def cal_mse(y1, y2):
         return np.nanmean(np.square(y1 - y2))
 
@@ -479,7 +509,7 @@ class OtherUtils:
         if data_format == 'map':
             for m in range(tensor.shape[1]):
                 tensor[:, m, :, :] = tensor[:, m, :, :] * stds[m] + means[m]
-        elif data_format == 'grid':
+        elif data_format.startswith('grid'):
             for m in range(tensor.shape[0]):
                 tensor[m] = tensor[m] * stds[m] + means[m]
         return tensor

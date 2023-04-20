@@ -13,15 +13,14 @@ SHAPE = torch.Tensor(
 # MONTHS = utils.OtherUtils.get_predict_months(DATE, SHAPE[1])
 MONTHS = utils.OtherUtils.get_predict_months(DATE, 1)
 
-
 torch.manual_seed(42)
 
 
 def test():
-    na_list, valid_grids = utils.ObsParser.get_na_index(OBS_DIR, AREA)
-    syear, eyear = 1991, 2020
+    na_list, _ = utils.ObsParser.get_na_index(OBS_DIR, AREA)
+    syear, eyear = TRAIN_START_YEAR, TRAIN_END_YEAR + 1
 
-    if DATA_FORMAT == 'grid':
+    if DATA_FORMAT.startswith('grid'):
         for m in range(len(MONTHS)):
             corr_cases, test_cases, test_obses = [], [], []
             anomaly_test_cases, anomaly_test_obses = [], []
@@ -39,7 +38,7 @@ def test():
                 # 读取模型
                 # model = LSTM_CNN(train_dataset.shape)
                 # model = ANN(train_dataset.shape)
-                model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{test_year}年).pth"
+                model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
                 model = torch.load(model_path)
                 # model.load_state_dict(torch.load(model_path))
                 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -67,7 +66,7 @@ def test():
                             labels = OtherUtils.zscore_denormalization(
                                 labels, train_dataset.obs_means, train_dataset.obs_stds, DATA_FORMAT)
                         # 重组结果
-                        a, b = valid_grids[cnt]
+                        a, b = train_dataset.valid_grids[cnt]
                         inputs_map[a][b] = inputs[0][m]
                         outputs_map[a][b] = outputs[0][m]
                         labels_map[a][b] = labels[0][m]
@@ -220,7 +219,6 @@ def test():
             acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             acc_img.close()
-
 
 
 if __name__ == '__main__':

@@ -4,17 +4,15 @@ OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
 # DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
-DESCRIPTION = "ANN-1h4-dp.5-原始值-zscore-最小损失模型-输入n月输出1月"
+DESCRIPTION = "ANN-原始值-zscore-最小损失模型-输入n月3乘3输出1月1乘1-.0005lr-去dropout"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"
 EVALUATE_PATH = rf"./output/{DESCRIPTION}/评价指标"
 
-DATE = "0131"  # 预报日期
+DATE = "0730"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
-
-# 预报月份 预报日期往后5个月
 
 # 流域名称 ['ChangJiang', 'HuangHe', 'HeHai']
 BASIN = 'ChangJiang'
@@ -25,16 +23,14 @@ AREA = "JSJ"
 
 # 数据集划分参数
 TRAIN_START_YEAR = 1991
-TRAIN_END_YEAR = 2019
-# JUMP_YEAR = 2019
+TRAIN_END_YEAR = 2018
+
+# 数据处理参数
+NORMALIZATION = 'zscore'    # [minmax, zscore]
+DATA_FORMAT = 'grid33'  # [map, grid11, gird33]
+MODEL = 'ANN33'      # [LSTM_CNN, ANN, ANN33]
 
 # 训练参数
-# NORMALIZATION = "minmax"
-NORMALIZATION = "zscore"
-DATA_FORMAT = 'grid'
-# DATA_FORMAT = 'map'
-EPOCH = 150
-BATCH_SIZE = 28
-LR = 0.005
-
-# MODEL_PATH = r"91-18.pth"
+EPOCH = 600
+BATCH_SIZE = 1024
+LR = 0.0005

@@ -103,7 +103,15 @@ if __name__ == '__main__':
         test_dataset = TestDataset(test_year, test_year, train_dataset)
         test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型
-        model = LSTM_CNN(train_dataset.shape)
+        if DATA_FORMAT == 'map':
+            model = LSTM_CNN(train_dataset.shape)
+        elif DATA_FORMAT == 'gird11':
+            model = ANN(train_dataset.shape)
+        elif DATA_FORMAT == 'grid33':
+            model = ANN33(train_dataset.shape)
+        else:
+            print('请选择正确的模型')
+            break
         # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # model.to(device)
         criterion = torch.nn.MSELoss()
