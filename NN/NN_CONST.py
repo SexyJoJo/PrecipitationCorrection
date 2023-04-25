@@ -4,13 +4,14 @@ OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
 # 输出根目录
 # DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
-DESCRIPTION = "ANN-原始值-zscore-最小损失模型-输入n月3乘3输出1月1乘1-.0005lr-去dropout"
+# DESCRIPTION = "ANN-原始值-zscore-最小损失模型-输入n月3乘3输出1月1乘1-.0005lr-去dropout"
+DESCRIPTION = "LSTM-原始值-zscore-最小损失模型-输入n月输出1月-batch8-epoch150-.001lr"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"
 EVALUATE_PATH = rf"./output/{DESCRIPTION}/评价指标"
 
-DATE = "0730"  # 预报日期
+DATE = "0131"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
 
@@ -27,10 +28,10 @@ TRAIN_END_YEAR = 2018
 
 # 数据处理参数
 NORMALIZATION = 'zscore'    # [minmax, zscore]
-DATA_FORMAT = 'grid33'  # [map, grid11, gird33]
-MODEL = 'ANN33'      # [LSTM_CNN, ANN, ANN33]
+DATA_FORMAT = 'map'  # [map, grid11, gird33]on
+MODEL = 'LSTM'      # [LSTM_CNN, ANN, ANN33, LSTM]
 
 # 训练参数
-EPOCH = 600
-BATCH_SIZE = 1024
-LR = 0.0005
+EPOCH = 150
+BATCH_SIZE = 8
+LR = 0.001

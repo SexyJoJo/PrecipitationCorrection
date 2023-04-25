@@ -694,3 +694,11 @@ class PaintUtils:
         os.makedirs(img_path, exist_ok=True)
         plt.savefig(f"{img_path}/{title}")
         plt.close()
+
+
+if __name__ == '__main__':
+    for root, dirs, files in os.walk(r"C:\Users\JOJO\Desktop\三亚EC数据_探空格式"):
+        for file in files:
+            new_file = file.replace('11111', '12345')
+            if file.startswith('11111'):
+                os.rename(os.path.join(root, file), os.path.join(root, new_file))

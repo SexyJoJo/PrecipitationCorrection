@@ -32,6 +32,7 @@ class TrainDataset(Dataset):
         if DATA_FORMAT == 'map':
             self.case_data = np.nan_to_num(self.case_data, nan=0.0)
             self.obs_data = np.nan_to_num(self.obs_data, nan=0.0)
+            self.obs_data = self.obs_data[:, 0: 1, :, :]
 
         # 归一化
         self.case_means, self.case_stds = utils.OtherUtils.cal_mean_std(all_case_data)
@@ -70,6 +71,7 @@ class TestDataset(Dataset):
             utils.CaseParser.get_many_2d_pravg(CASE_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA))
         self.obs_data = torch.Tensor(
             utils.ObsParser.get_many_2d_pravg(OBS_DIR, TEST_START_YEAR, TEST_END_YEAR, AREA, train_dataset.months))
+        self.obs_data = self.obs_data[:, 0: 1, :, :]    # 取第一个月
         self.shape = self.case_data.shape
 
         # 归一化

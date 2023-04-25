@@ -138,7 +138,7 @@ def test():
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)
                 # 读取模型
                 # model = LSTM_CNN(train_dataset.shape)
-                model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_1991-2019年模型(除{test_year}年).pth"
+                model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
                 # model.load_state_dict(torch.load(model_path))
                 model = torch.load(model_path)
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

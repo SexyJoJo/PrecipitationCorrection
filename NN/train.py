@@ -103,8 +103,10 @@ if __name__ == '__main__':
         test_dataset = TestDataset(test_year, test_year, train_dataset)
         test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型
-        if DATA_FORMAT == 'map':
+        if DATA_FORMAT == 'map' and MODEL == 'LSTM_CNN':
             model = LSTM_CNN(train_dataset.shape)
+        elif DATA_FORMAT == 'map' and MODEL == 'LSTM':
+            model = LSTM(train_dataset.shape)
         elif DATA_FORMAT == 'gird11':
             model = ANN(train_dataset.shape)
         elif DATA_FORMAT == 'grid33':
