@@ -107,12 +107,14 @@ if __name__ == '__main__':
             model = LSTM_CNN(train_dataset.shape)
         elif DATA_FORMAT == 'map' and MODEL == 'LSTM':
             model = LSTM(train_dataset.shape)
-        elif DATA_FORMAT == 'gird11':
+        elif DATA_FORMAT == 'grid11' and MODEL == 'LSTM11':
+            model = LSTM11(train_dataset.shape)
+        elif DATA_FORMAT == 'grid11' and MODEL == 'ANN':
             model = ANN(train_dataset.shape)
-        elif DATA_FORMAT == 'grid33':
+        elif DATA_FORMAT == 'grid33' and MODEL == 'ANN33':
             model = ANN33(train_dataset.shape)
         else:
-            print('请选择正确的模型')
+            print('请选择正确的模型与数据格式')
             break
         # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # model.to(device)

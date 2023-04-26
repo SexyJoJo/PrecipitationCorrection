@@ -97,6 +97,30 @@ class LSTM(nn.Module):
         return x
 
 
+class LSTM11(nn.Module):
+    def __init__(self, shape):
+        super(LSTM11, self).__init__()
+        self.shape = shape
+        input_size = 1
+        hidden_size = 64
+        num_layers = 1
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        shape = self.shape
+        x = x.view(len(x), 8, -1)
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        x, _ = self.lstm(x, (h0, c0))
+        x = x[:, -1, :]
+        x = self.fc(x)
+        # x = x.view(shape[0], 1, shape[2], shape[3])
+        return x
+
+
 class ANN(nn.Module):
     def __init__(self, shape):
         super(ANN, self).__init__()
