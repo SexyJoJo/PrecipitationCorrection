@@ -46,6 +46,11 @@ class TrainDataset(Dataset):
             self.case_data = utils.OtherUtils.min_max_normalization(self.case_data, self.min, self.max)
             self.obs_data = utils.OtherUtils.min_max_normalization(self.obs_data, self.min, self.max)
 
+        # 数据增强
+        if DATA_ENHANCE:
+            self.case_data = utils.CaseParser.data_enhance(self.case_data)
+            self.obs_data = utils.ObsParser.data_enhance(self.obs_data)
+
         # 数据维度转换
         if DATA_FORMAT.startswith('grid'):
             if DATA_FORMAT.endswith('11'):

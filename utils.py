@@ -113,6 +113,47 @@ class CaseParser:
         filename = f"{area}_PRAVG_{year + month_day}00c{case_num}_{year}_monthly.nc"
         return filename
 
+    @staticmethod
+    def data_enhance(all_arrays):
+        """每个二维矩阵向8个方位移动一格"""
+
+        def shift_2d_array(array):
+            """每个二维矩阵向8个方位移动一格"""
+            if len(array.shape) != 2:
+                raise ValueError("Input array must be 2-dimensional")
+
+            # Define 8 possible shifts
+            shifts = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+            shifted_arrays = []
+            shifted_arrays.append(array)
+            for dx, dy in shifts:
+                shifted_array = np.roll(array, shift=(dx, dy), axis=(0, 1))
+
+                # Fill empty edge positions with neighboring edge values
+                if dx == 1:
+                    shifted_array[0, :] = shifted_array[1, :]
+                elif dx == -1:
+                    shifted_array[-1, :] = shifted_array[-2, :]
+
+                if dy == 1:
+                    shifted_array[:, 0] = shifted_array[:, 1]
+                elif dy == -1:
+                    shifted_array[:, -1] = shifted_array[:, -2]
+
+                shifted_arrays.append(shifted_array)
+
+            return shifted_arrays
+
+        new_all_arrays = []
+        shape = all_arrays.shape
+        all_arrays = all_arrays.reshape(-1, shape[2], shape[3])
+        for array in all_arrays:
+            shifted_arrays = shift_2d_array(array)
+            new_all_arrays.append(shifted_arrays)
+
+        new_all_arrays = np.array(new_all_arrays).reshape((-1, shape[1], shape[2], shape[3]))
+        return new_all_arrays
+
 
 class ObsParser:
     @staticmethod
@@ -281,6 +322,24 @@ class ObsParser:
     def get_filename(year, month, area):
         filename = f"{area}_obs_prec_rcm_{year + month}.nc"
         return filename
+
+    @staticmethod
+    def data_enhance(all_arrays):
+        def shift_2d_array(array):
+            shifted_arrays = []
+            for i in range(9):
+                shifted_arrays.append(array)
+            return shifted_arrays
+
+        new_all_arrays = []
+        shape = all_arrays.shape
+        all_arrays = all_arrays.reshape(-1, shape[2], shape[3])
+        for array in all_arrays:
+            shifted_arrays = shift_2d_array(array)
+            new_all_arrays.append(shifted_arrays)
+
+        new_all_arrays = np.array(new_all_arrays).reshape((-1, shape[1], shape[2], shape[3]))
+        return new_all_arrays
 
 
 class OtherUtils:
@@ -523,85 +582,6 @@ class OtherUtils:
     def min_max_denormalization(tensor, tensor_min, tensor_max):
         """MinMax反归一化"""
         return (tensor_max - tensor_min) * tensor + tensor_min
-
-    @staticmethod
-    def data_enhance():
-        """二维矩阵向8个方位移动一格"""
-        tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-
-        # 矩阵上移一格
-        body = tensor[1:]
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_move = torch.cat([body, space], 0)
-        print(up_move)
-
-        # 矩阵右上移一格
-        body = tensor[1:]
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_right_move = torch.cat([body, space], 0)
-        space = torch.zeros(up_right_move.shape[0]).unsqueeze(1)
-        up_right_move = torch.cat([space, up_right_move], 1)
-        print(up_right_move)
-
-        # 矩阵右移一格
-        body = tensor
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[0]).unsqueeze(1)
-        right_move = torch.cat([space, body], 1)
-        print(right_move)
-
-        # 矩阵右下移一格
-        body = tensor[:-1]
-        body = body.cpu().numpy()
-        body = np.delete(body, -1, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_right_move = torch.cat([space, body], 0)
-        space = torch.zeros(down_right_move.shape[0]).unsqueeze(1)
-        down_right_move = torch.cat([space, down_right_move], 1)
-        print(down_right_move)
-
-        # 矩阵下移一格
-        body = tensor[:-1]
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_move = torch.cat([space, body], 0)
-        print(down_move)
-
-        # 矩阵左下移一格
-        body = tensor[:-1]
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        down_left_move = torch.cat([space, body], 0)
-        space = torch.zeros(down_left_move.shape[0]).unsqueeze(1)
-        down_left_move = torch.cat([down_left_move, space], 1)
-        print(down_left_move)
-
-        # 矩阵左移一格
-        body = tensor
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[0]).unsqueeze(1)
-        left_move = torch.cat([body, space], 1)
-        print(left_move)
-
-        # 矩阵左上移一格
-        body = tensor[1:]
-        body = body.cpu().numpy()
-        body = np.delete(body, 0, axis=1)
-        body = torch.tensor(body)
-        space = torch.zeros(body.shape[1]).unsqueeze(0)
-        up_left_move = torch.cat([body, space], 0)
-        space = torch.zeros(up_left_move.shape[0]).unsqueeze(1)
-        up_left_move = torch.cat([up_left_move, space], 1)
-        print(up_left_move)
 
 
 class PaintUtils:
