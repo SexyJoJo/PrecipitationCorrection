@@ -44,7 +44,7 @@ class LSTM_CNN(nn.Module):
         self.conv2 = nn.Sequential(
             nn.Conv2d(
                 in_channels=16,  # 输入个数与上层输出一致
-                out_channels=shape[1],
+                out_channels=1,
                 kernel_size=(3, 3),
                 stride=(1, 1),
                 padding=1
@@ -160,4 +160,75 @@ class ANN33(nn.Module):
 
     def forward(self, x):
         x = self.net(x)
+        return x
+
+
+class UNet(nn.Module):
+    def __init__(self, shape):
+        super(UNet, self).__init__()
+
+        def conv_block(in_channels, out_channels):
+            return nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+                nn.ReLU(inplace=True)
+            )
+
+        def upconv_block(in_channels, out_channels):
+            return nn.Sequential(
+                nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2),
+                nn.ReLU(inplace=True)
+            )
+
+        self.shape = shape
+
+        self.encoder1 = conv_block(8, 16)
+        self.pool1 = nn.MaxPool2d(2)
+
+        self.encoder2 = conv_block(16, 32)
+        self.pool2 = nn.MaxPool2d(2)
+
+        self.encoder3 = conv_block(32, 64)
+        self.pool3 = nn.MaxPool2d(2)
+
+        self.middle = conv_block(64, 128)
+
+        self.upconv1 = upconv_block(128, 64)
+        self.decoder1 = conv_block(128, 64)
+
+        self.upconv2 = upconv_block(64, 32)
+        self.decoder2 = conv_block(64, 32)
+
+        self.upconv3 = upconv_block(32, 16)
+        self.decoder3 = conv_block(32, 16)
+
+        self.output = nn.Conv2d(16, 1, kernel_size=1)
+
+    def forward(self, x):
+        enc1 = self.encoder1(x)
+        x = self.pool1(enc1)
+
+        enc2 = self.encoder2(x)
+        x = self.pool2(enc2)
+
+        enc3 = self.encoder3(x)
+        x = self.pool3(enc3)
+
+        x = self.middle(x)
+
+        x = self.upconv1(x)
+        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc3)], dim=1)
+        x = self.decoder1(x)
+
+        x = self.upconv2(x)
+        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc2)], dim=1)
+        x = self.decoder2(x)
+
+        x = self.upconv3(x)
+        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc1)], dim=1)
+        x = self.decoder3(x)
+
+        x = self.output(x)
+        x = nn.functional.interpolate(x, size=(self.shape[2], self.shape[3]), mode='bilinear', align_corners=False)
         return x

@@ -18,10 +18,10 @@ TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2018
 
 # 数据处理参数
-DATA_ENHANCE = True  # 数据增强以增加样本量，仅针对二维
+DATA_ENHANCE = False  # 数据增强以增加样本量，仅针对二维
 NORMALIZATION = 'zscore'  # [minmax, zscore]
 DATA_FORMAT = 'map'  # [map, grid11, gird33]on
-MODEL = 'LSTM'  # [LSTM_CNN, ANN, ANN33, LSTM, LSTM11]
+MODEL = 'UNet'  # [LSTM_CNN, ANN, ANN33, LSTM, LSTM11]
 
 # 训练参数
 EPOCH = 150
@@ -39,7 +39,8 @@ LR = 0.001
 # 输出根目录
 # DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
 # DESCRIPTION = "ANN-原始值-zscore-最小损失模型-输入n月3乘3输出1月1乘1-.0005lr-去dropout"
-DESCRIPTION = f"{MODEL}-原始值-{NORMALIZATION}-最小损失模型-输入{DATA_FORMAT}-batch{BATCH_SIZE}-epoch{EPOCH}-{LR}lr"
+DESCRIPTION = f"{MODEL}-原始值-{NORMALIZATION}-最小损失模型-输入{DATA_FORMAT}{'增强' if DATA_ENHANCE else ''}-" \
+              f"batch{BATCH_SIZE}-epoch{EPOCH}-{LR}lr"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
 MODEL_PATH = rf"./output/{DESCRIPTION}/models"
 RESULT_PATH = rf"./output/{DESCRIPTION}/results"

@@ -113,6 +113,8 @@ if __name__ == '__main__':
             model = ANN(train_dataset.shape)
         elif DATA_FORMAT == 'grid33' and MODEL == 'ANN33':
             model = ANN33(train_dataset.shape)
+        elif DATA_FORMAT == 'map' and MODEL == 'UNet':
+            model = UNet(train_dataset.shape)
         else:
             print('请选择正确的模型与数据格式')
             break
