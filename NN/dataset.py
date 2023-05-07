@@ -48,8 +48,8 @@ class TrainDataset(Dataset):
 
         # 数据增强
         if DATA_ENHANCE:
-            self.case_data = utils.CaseParser.data_enhance(self.case_data)
-            self.obs_data = utils.ObsParser.data_enhance(self.obs_data)
+            self.case_data = utils.CaseParser.data_enhance(self.case_data, DATA_ENHANCE)
+            self.obs_data = utils.ObsParser.data_enhance(self.obs_data, DATA_ENHANCE)
 
         # 数据维度转换
         if DATA_FORMAT.startswith('grid'):

@@ -114,8 +114,8 @@ class CaseParser:
         return filename
 
     @staticmethod
-    def data_enhance(all_arrays):
-        """每个二维矩阵向8个方位移动一格"""
+    def data_enhance(all_arrays, step):
+        """每个二维矩阵向8个方位移动step格"""
 
         def shift_2d_array(array):
             """每个二维矩阵向8个方位移动一格"""
@@ -144,11 +144,38 @@ class CaseParser:
 
             return shifted_arrays
 
+        def shift_1_and_2_steps(matrix):
+            shifted_matrices = []
+
+            for step in [1, 2]:
+                for dx, dy in [(0, step), (0, -step), (step, 0), (-step, 0), (step, step), (-step, -step),
+                               (step, -step), (-step, step)]:
+                    shifted_matrix = np.roll(matrix, shift=(dx, dy), axis=(0, 1))
+
+                    if dx > 0:
+                        shifted_matrix[:dx, :] = shifted_matrix[dx:dx * 2, :]
+                    elif dx < 0:
+                        shifted_matrix[dx:, :] = shifted_matrix[2 * dx:dx, :]
+
+                    if dy > 0:
+                        shifted_matrix[:, :dy] = shifted_matrix[:, dy:dy * 2]
+                    elif dy < 0:
+                        shifted_matrix[:, dy:] = shifted_matrix[:, 2 * dy:dy]
+
+                    shifted_matrices.append(shifted_matrix)
+
+            return shifted_matrices
+
         new_all_arrays = []
         shape = all_arrays.shape
         all_arrays = all_arrays.reshape(-1, shape[2], shape[3])
         for array in all_arrays:
-            shifted_arrays = shift_2d_array(array)
+            if step == 1:
+                shifted_arrays = shift_2d_array(array)
+            elif step == 2:
+                shifted_arrays = shift_1_and_2_steps(array)
+            else:
+                raise '不支持当前DATA_ENHANCE'
             new_all_arrays.append(shifted_arrays)
 
         new_all_arrays = np.array(new_all_arrays).reshape((-1, shape[1], shape[2], shape[3]))
@@ -324,10 +351,16 @@ class ObsParser:
         return filename
 
     @staticmethod
-    def data_enhance(all_arrays):
+    def data_enhance(all_arrays, step):
         def shift_2d_array(array):
             shifted_arrays = []
-            for i in range(9):
+            for i in range(1 * 8 + 1):
+                shifted_arrays.append(array)
+            return shifted_arrays
+
+        def shift_1_and_2_steps(array):
+            shifted_arrays = []
+            for i in range(2 * 8 + 1):
                 shifted_arrays.append(array)
             return shifted_arrays
 
@@ -335,7 +368,12 @@ class ObsParser:
         shape = all_arrays.shape
         all_arrays = all_arrays.reshape(-1, shape[2], shape[3])
         for array in all_arrays:
-            shifted_arrays = shift_2d_array(array)
+            if step == 1:
+                shifted_arrays = shift_2d_array(array)
+            elif step == 2:
+                shifted_arrays = shift_1_and_2_steps(array)
+            else:
+                raise '不支持当前DATA_ENHANCE'
             new_all_arrays.append(shifted_arrays)
 
         new_all_arrays = np.array(new_all_arrays).reshape((-1, shape[1], shape[2], shape[3]))
