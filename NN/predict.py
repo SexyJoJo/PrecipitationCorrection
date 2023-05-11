@@ -18,7 +18,7 @@ torch.manual_seed(42)
 
 def test():
     na_list, _ = utils.ObsParser.get_na_index(OBS_DIR, AREA)
-    syear, eyear = TRAIN_START_YEAR, TRAIN_END_YEAR + 1
+    syear, eyear = TRAIN_START_YEAR + 1, TRAIN_END_YEAR + 1
 
     if DATA_FORMAT.startswith('grid'):
         for m in range(len(MONTHS)):
@@ -26,12 +26,13 @@ def test():
             anomaly_test_cases, anomaly_test_obses = [], []
 
             for test_year in range(syear, eyear):
+                valid_year = test_year - 1
                 # 输出数组初始化
                 inputs_map = np.zeros([SHAPE[2], SHAPE[3]]) + np.nan
                 outputs_map = np.zeros([SHAPE[2], SHAPE[3]]) + np.nan
                 labels_map = np.zeros([SHAPE[2], SHAPE[3]]) + np.nan
                 # 加载训练集
-                train_dataset = TrainDataset(test_year)
+                train_dataset = TrainDataset([valid_year, test_year])
                 # 加载测试集
                 test_dataset = TestDataset(test_year, test_year, train_dataset)
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False)
@@ -132,7 +133,8 @@ def test():
             corr_cases, test_cases, test_obses = [], [], []
             anomaly_test_cases, anomaly_test_obses = [], []
             for test_year in range(syear, eyear):
-                train_dataset = TrainDataset(test_year)
+                valid_year = test_year - 1
+                train_dataset = TrainDataset([valid_year, test_year])
                 # 加载测试集
                 test_dataset = TestDataset(test_year, test_year, train_dataset)
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1)

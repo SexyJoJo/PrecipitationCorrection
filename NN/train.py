@@ -50,11 +50,11 @@ def train():
         model.eval()
         testing_loss = 0.
         with torch.no_grad():
-            for data in test_dataloader:
-                test_inputs, test_labels = data
+            for data in valid_dataloader:
+                valid_inputs, valid_labels = data
                 # test_inputs, test_labels = test_inputs.to(device), test_labels.to(device)
-                test_outputs = model(test_inputs)
-                test_loss = criterion(test_outputs, test_labels)
+                valid_outputs = model(valid_inputs)
+                test_loss = criterion(valid_outputs, valid_labels)
                 testing_loss += test_loss
 
         testing_loss = testing_loss.item() / len(test_dataloader)
@@ -94,12 +94,16 @@ if __name__ == '__main__':
     # 日志初始化
     logging.basicConfig(filename='./log.txt', level=logging.DEBUG, format='%(asctime)s  %(message)s')
     # setup_seed(20)
-    # 所有年份中选一年作为测试集，其他年份作为训练集，以不同的训练集循环训练多个模型
-    for test_year in range(TRAIN_START_YEAR, TRAIN_END_YEAR + 1):
+    # 所有年份中选一年作为测试集，一年作为验证集，其他年份作为训练集，以不同的训练集循环训练多个模型
+    for test_year in range(TRAIN_START_YEAR+1, TRAIN_END_YEAR + 1):
+        valid_year = test_year - 1
         # 加载训练集
-        train_dataset = TrainDataset(test_year)
+        train_dataset = TrainDataset([valid_year, test_year])
         train_dataloader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-        # 加载测试集 用于查看损失
+        # 加载验证集
+        valid_dataset = TestDataset(valid_year, valid_year, train_dataset)
+        valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        # 加载测试集
         test_dataset = TestDataset(test_year, test_year, train_dataset)
         test_dataloader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
         # 加载模型

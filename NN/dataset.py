@@ -11,14 +11,14 @@ OBS_DIR = os.path.join(OBS_DIR, BASIN)
 
 
 class TrainDataset(Dataset):
-    def __init__(self, JUMP_YEAR):
+    def __init__(self, JUMP_YEARS):
         super().__init__()
         self.invalid_girds, self.valid_grids = utils.ObsParser.get_na_index(OBS_DIR, AREA)
 
-        self.case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEAR)
+        self.case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, JUMP_YEARS)
         self.shape = self.case_data.shape
         self.months = utils.OtherUtils.get_predict_months(DATE, self.shape[1])
-        self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEAR)
+        self.obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months, JUMP_YEARS)
         all_case_data = utils.CaseParser.get_many_2d_pravg(CASE_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA)
         all_obs_data = utils.ObsParser.get_many_2d_pravg(OBS_DIR, TRAIN_START_YEAR, TRAIN_END_YEAR, AREA, self.months)
         # 去除异常值
@@ -49,7 +49,7 @@ class TrainDataset(Dataset):
         # 数据增强
         if DATA_ENHANCE:
             self.case_data = utils.CaseParser.data_enhance(self.case_data, DATA_ENHANCE)
-            self.obs_data = utils.ObsParser.data_enhance(self.obs_data, DATA_ENHANCE)
+            self.obs_data = utils.CaseParser.data_enhance(self.obs_data, DATA_ENHANCE)
 
         # 数据维度转换
         if DATA_FORMAT.startswith('grid'):

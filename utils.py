@@ -68,10 +68,10 @@ class CaseParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_year=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, jump_years=None):
         """
         提取多个case文件的某个月分的PRAVG值(三维数组)
-        :param jump_year: 跳过年份
+        :param jump_year: 跳过年份列表
         :param area: 区域简称
         :param eyear: 结束年份
         :param syear: 起始年份
@@ -79,8 +79,11 @@ class CaseParser:
         :return: 多个二维PRAVG数组（三维数组）
         """
         stime = datetime(year=syear, month=1, day=1)
-        if jump_year:
-            jump_year = datetime(year=jump_year, month=1, day=1)
+        temp_jump_years = []
+        if jump_years:
+            for jump_year in jump_years:
+                jump_year = datetime(year=jump_year, month=1, day=1)
+                temp_jump_years.append(jump_year)
         etime = datetime(year=eyear + 1, month=1, day=1)
 
         pravgs = []
@@ -88,14 +91,13 @@ class CaseParser:
             for i, file in enumerate(files):
                 if file.startswith(area):
                     filetime = CaseParser.get_filetime(file)
-                    if jump_year and jump_year <= filetime <= jump_year + relativedelta(years=1):
-                        continue
+                    if jump_years:
+                        if temp_jump_years[0] <= filetime <= temp_jump_years[0] + relativedelta(years=1) or \
+                                temp_jump_years[1] <= filetime <= temp_jump_years[1] + relativedelta(years=1):
+                            continue
                     if stime <= filetime <= etime:
                         pravg = CaseParser.get_one_2d_pravg(os.path.join(root, file))
                         pravgs.append(pravg)
-
-                        # TODO 数据增强
-                        # 像素点错位（8个方向）
         return np.array(pravgs)
 
     @staticmethod
@@ -244,7 +246,7 @@ class ObsParser:
         return pravg
 
     @staticmethod
-    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_year=None):
+    def get_many_2d_pravg(nc_dir, syear, eyear, area, months, jump_years=None):
         """
         提取指定时间、地区范围内的PRAVG组成一维数组
         :param nc_dir: 数据目录
@@ -252,12 +254,12 @@ class ObsParser:
         :param eyear: 结束年份
         :param area: 区域名称
         :param months: 提取月份
-        :param jump_year: 忽略的年份
+        :param jump_years: 忽略的年份
         :return: 二维PRAVG数组
         """
         pravgs = []
         for year in range(syear, eyear + 1):
-            if year == jump_year:
+            if jump_years and year in jump_years:
                 continue
             curr_year_pravg = []
 

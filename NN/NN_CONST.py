@@ -2,7 +2,7 @@
 CASE_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided case"
 OBS_DIR = r"D:\PythonProject\PrecipitationCorrection\divide area\divided obs"
 
-DATE = "0730"  # 预报日期
+DATE = "0131"  # 预报日期
 CASE_NUM = "CASE1"  # CASE编号
 TIME = "TIME00"  # 预报时次
 
@@ -18,7 +18,7 @@ TRAIN_START_YEAR = 1991
 TRAIN_END_YEAR = 2018
 
 # 数据处理参数
-DATA_ENHANCE = 1  # 数据增强以增加样本量，仅针对二维
+DATA_ENHANCE = 2  # 数据增强以增加样本量，仅针对二维
 NORMALIZATION = 'zscore'  # [minmax, zscore]
 DATA_FORMAT = 'map'  # [map, grid11, gird33]on
 MODEL = 'UNet'  # [LSTM_CNN, ANN, ANN33, LSTM, LSTM11]
@@ -39,7 +39,7 @@ LR = 0.001
 # 输出根目录
 # DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
 # DESCRIPTION = "ANN-原始值-zscore-最小损失模型-输入n月3乘3输出1月1乘1-.0005lr-去dropout"
-DESCRIPTION = f"{MODEL}-原始值-{NORMALIZATION}-最小损失模型-输入{DATA_FORMAT}" \
+DESCRIPTION = f"{MODEL}-原始值-{NORMALIZATION}-最小损失模型-验证测试分开-输入{DATA_FORMAT}" \
               f"{'增强'+str(DATA_ENHANCE*8+1)+'倍' if DATA_ENHANCE else ''}-" \
               f"batch{BATCH_SIZE}-epoch{EPOCH}-{LR}lr"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"
