@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from NN_CONST import *
 from visdom import Visdom
 
-
 torch.manual_seed(42)
 
 
@@ -62,11 +61,11 @@ def train():
 
         # 查找损失最小模型
         os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
-        model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
-                                  rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
+        best_model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
+                                       rf"{TRAIN_END_YEAR}年模型(除{test_year}年)_best.pth"
         if testing_loss < best_model_loss and epoch > 20:
             best_model_loss = testing_loss
-            torch.save(model, model_path, _use_new_zipfile_serialization=False)
+            torch.save(model, best_model_path, _use_new_zipfile_serialization=False)
 
         viz.line([[training_one_loss, testing_loss]], [epoch],
                  win=f'tt_loss_{test_year}', update='append',
@@ -78,6 +77,10 @@ def train():
 
         total_training_loss_list.append(training_loss)
         total_test_loss_list.append(testing_loss)
+
+    final_model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
+                                    rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
+    torch.save(model, final_model_path, _use_new_zipfile_serialization=False)
 
     # 绘制损失图
     plt.plot(list(range(EPOCH)), total_training_loss_list, label="total training loss")
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     logging.basicConfig(filename='./log.txt', level=logging.DEBUG, format='%(asctime)s  %(message)s')
     # setup_seed(20)
     # 所有年份中选一年作为测试集，一年作为验证集，其他年份作为训练集，以不同的训练集循环训练多个模型
-    for test_year in range(TRAIN_START_YEAR+1, TRAIN_END_YEAR + 1):
+    for test_year in range(TRAIN_START_YEAR + 1, TRAIN_END_YEAR + 1):
         valid_year = test_year - 1
         # 加载训练集
         train_dataset = TrainDataset([valid_year, test_year])
