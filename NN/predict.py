@@ -117,12 +117,14 @@ def test():
             corr_tcc = OtherUtils.cal_TCC(corr_cases, test_obses)  # 订正后与真实值
             corr_tcc2 = OtherUtils.cal_TCC(corr_cases2, test_obses)  # 订正后与真实值
             case_tcc = OtherUtils.cal_TCC(test_cases, test_obses)  # 订正前与真实值
-            tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
-            tcc_img2 = PaintUtils.paint_TCC(case_tcc, corr_tcc2)
             os.makedirs(tcc_path, exist_ok=True)
+
+            tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
             tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月")
             tcc_img.close()
+
+            tcc_img2 = PaintUtils.paint_TCC(case_tcc, corr_tcc2)
             tcc_img2.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-最优模型")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-最优模型")
             tcc_img2.close()
@@ -130,11 +132,13 @@ def test():
             corr_tcc = OtherUtils.cal_TCC(anomaly_corr_cases, anomaly_test_obses)  # 订正后与真实值
             corr_tcc2 = OtherUtils.cal_TCC(anomaly_corr_cases2, anomaly_test_obses)  # 订正后与真实值
             case_tcc = OtherUtils.cal_TCC(anomaly_test_cases, anomaly_test_obses)  # 订正前与真实值
+
             tcc_img = PaintUtils.paint_TCC(case_tcc, corr_tcc)
-            tcc_img2 = PaintUtils.paint_TCC(case_tcc, corr_tcc2)
             tcc_img.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             tcc_img.close()
+
+            tcc_img2 = PaintUtils.paint_TCC(case_tcc, corr_tcc2)
             tcc_img2.savefig(rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平-最优模型")
             print("tcc已保存", rf"{tcc_path}/{AREA}_91-19年{MONTHS[m]}月-距平-最优模型")
             tcc_img2.close()
@@ -144,12 +148,14 @@ def test():
             corr_acc = OtherUtils.cal_ACC(corr_cases, test_obses, False)
             corr_acc2 = OtherUtils.cal_ACC(corr_cases2, test_obses, False)
             case_acc = OtherUtils.cal_ACC(test_cases, test_obses, False)
-            acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
-            acc_img2 = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc2)
             os.makedirs(acc_path, exist_ok=True)
+
+            acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
             acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
             print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月")
             acc_img.close()
+
+            acc_img2 = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc2)
             acc_img2.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-最优模型")
             print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-最优模型")
             acc_img2.close()
@@ -157,11 +163,13 @@ def test():
             corr_acc = OtherUtils.cal_ACC(anomaly_corr_cases, anomaly_test_obses, False)
             corr_acc2 = OtherUtils.cal_ACC(anomaly_corr_cases2, anomaly_test_obses, False)
             case_acc = OtherUtils.cal_ACC(anomaly_test_cases, anomaly_test_obses, False)
+
             acc_img = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc)
-            acc_img2 = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc2)
             acc_img.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平")
             acc_img.close()
+
+            acc_img2 = PaintUtils.paint_ACC(range(syear, eyear), case_acc, corr_acc2)
             acc_img2.savefig(rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平-最优模型")
             print("acc已保存", rf"{acc_path}/{AREA}_91-19年{MONTHS[m]}月-距平-最优模型")
             acc_img2.close()

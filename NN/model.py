@@ -183,51 +183,90 @@ class UNet(nn.Module):
 
         self.shape = shape
 
+        # # 3层Unet
+        # self.encoder1 = conv_block(8, 16)
+        # self.pool1 = nn.MaxPool2d(2)
+        #
+        # self.encoder2 = conv_block(16, 32)
+        # self.pool2 = nn.MaxPool2d(2)
+        #
+        # self.encoder3 = conv_block(32, 64)
+        # self.pool3 = nn.MaxPool2d(2)
+        #
+        # self.middle = conv_block(64, 128)
+        #
+        # self.upconv1 = upconv_block(128, 64)
+        # self.decoder1 = conv_block(128, 64)
+        #
+        # self.upconv2 = upconv_block(64, 32)
+        # self.decoder2 = conv_block(64, 32)
+        #
+        # self.upconv3 = upconv_block(32, 16)
+        # self.decoder3 = conv_block(32, 16)
+        #
+        # self.output = nn.Conv2d(16, 1, kernel_size=1)
+
+        # 2层Unet
         self.encoder1 = conv_block(8, 16)
         self.pool1 = nn.MaxPool2d(2)
 
         self.encoder2 = conv_block(16, 32)
         self.pool2 = nn.MaxPool2d(2)
 
-        self.encoder3 = conv_block(32, 64)
-        self.pool3 = nn.MaxPool2d(2)
+        self.middle = conv_block(32, 64)
 
-        self.middle = conv_block(64, 128)
+        self.upconv1 = upconv_block(64, 32)
+        self.decoder1 = conv_block(64, 32)
 
-        self.upconv1 = upconv_block(128, 64)
-        self.decoder1 = conv_block(128, 64)
-
-        self.upconv2 = upconv_block(64, 32)
-        self.decoder2 = conv_block(64, 32)
-
-        self.upconv3 = upconv_block(32, 16)
-        self.decoder3 = conv_block(32, 16)
+        self.upconv2 = upconv_block(32, 16)
+        self.decoder2 = conv_block(32, 16)
 
         self.output = nn.Conv2d(16, 1, kernel_size=1)
 
     def forward(self, x):
+        # # 3层Unet
+        # enc1 = self.encoder1(x)
+        # x = self.pool1(enc1)
+        #
+        # enc2 = self.encoder2(x)
+        # x = self.pool2(enc2)
+        #
+        # enc3 = self.encoder3(x)
+        # x = self.pool3(enc3)
+        #
+        # x = self.middle(x)
+        #
+        # x = self.upconv1(x)
+        # x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc3)], dim=1)
+        # x = self.decoder1(x)
+        #
+        # x = self.upconv2(x)
+        # x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc2)], dim=1)
+        # x = self.decoder2(x)
+        #
+        # x = self.upconv3(x)
+        # x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc1)], dim=1)
+        # x = self.decoder3(x)
+        #
+        # x = self.output(x)
+        # x = nn.functional.interpolate(x, size=(self.shape[2], self.shape[3]), mode='bilinear', align_corners=False)
+
+        # 3层Unet
         enc1 = self.encoder1(x)
         x = self.pool1(enc1)
 
         enc2 = self.encoder2(x)
         x = self.pool2(enc2)
 
-        enc3 = self.encoder3(x)
-        x = self.pool3(enc3)
-
         x = self.middle(x)
 
         x = self.upconv1(x)
-        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc3)], dim=1)
+        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc2)], dim=1)
         x = self.decoder1(x)
 
         x = self.upconv2(x)
-        x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc2)], dim=1)
-        x = self.decoder2(x)
-
-        x = self.upconv3(x)
         x = torch.cat([x, nn.Upsample(size=(x.size(2), x.size(3)), mode='nearest')(enc1)], dim=1)
-        x = self.decoder3(x)
+        x = self.decoder2(x)
 
         x = self.output(x)
         x = nn.functional.interpolate(x, size=(self.shape[2], self.shape[3]), mode='bilinear', align_corners=False)
