@@ -118,6 +118,8 @@ if __name__ == '__main__':
             model = LSTM11(train_dataset.shape)
         elif DATA_FORMAT == 'grid11' and MODEL == 'ANN':
             model = ANN(train_dataset.shape)
+        elif DATA_FORMAT == 'grid11' and MODEL == 'ANN_h16':
+            model = ANN_h16(train_dataset.shape)
         elif DATA_FORMAT == 'grid33' and MODEL == 'ANN33':
             model = ANN33(train_dataset.shape)
         elif DATA_FORMAT == 'map' and MODEL == 'UNet':

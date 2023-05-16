@@ -21,7 +21,7 @@ TRAIN_END_YEAR = 2018
 DATA_ENHANCE = 0  # 数据增强以增加样本量，仅针对二维
 NORMALIZATION = 'zscore'  # [minmax, zscore]
 DATA_FORMAT = 'grid11'  # [map, grid11, gird33]
-MODEL = 'ANN'  # [LSTM_CNN, ANN, ANN33, LSTM, LSTM11, UNet]
+MODEL = 'ANN'  # [LSTM_CNN, ANN, ANN_h16, ANN33, LSTM, LSTM11, UNet]
 
 # 训练参数
 EPOCH = 150

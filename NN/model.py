@@ -142,6 +142,27 @@ class ANN(nn.Module):
         return x
 
 
+class ANN_h16(nn.Module):
+    def __init__(self, shape):
+        super(ANN_h16, self).__init__()
+
+        net = nn.Sequential()
+        net.add_module(r'inputlayer',
+                       nn.Linear(in_features=shape[1], out_features=16, bias=True))
+        net.add_module(r'inputact', nn.Tanh())
+        net.add_module(rf'hidlayer-1',
+                       nn.Linear(in_features=16, out_features=16, bias=True))
+        # net.add_module(rf'drop-1', nn.Dropout())
+        net.add_module(rf'hidact-1', nn.Tanh())
+        net.add_module(r'outputlayer',
+                       nn.Linear(in_features=16, out_features=1, bias=True))
+        self.net = net
+
+    def forward(self, x):
+        x = self.net(x)
+        return x
+
+
 class ANN33(nn.Module):
     def __init__(self, shape):
         super(ANN33, self).__init__()

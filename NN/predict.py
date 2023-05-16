@@ -35,7 +35,9 @@ def test():
                 # 加载训练集
                 train_dataset = TrainDataset([valid_year, test_year])
                 # 加载测试集
+                # TODO
                 test_dataset = TestDataset(test_year, test_year, train_dataset)
+                # test_dataset = TestDataset(valid_year, valid_year, train_dataset)
                 test_dataloader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False)
                 # 读取模型
                 # model = LSTM_CNN(train_dataset.shape)
