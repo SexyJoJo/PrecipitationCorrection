@@ -20,11 +20,12 @@ TRAIN_END_YEAR = 2018
 # 数据处理参数
 DATA_ENHANCE = 0  # 数据增强以增加样本量，仅针对二维
 NORMALIZATION = 'zscore'  # [minmax, zscore]
-DATA_FORMAT = 'map'  # [map, grid11, gird33]
-MODEL = 'LSTM11'  # [LSTM_CNN, ANN, ANN_h16, ANN33, LSTM, LSTM11, UNet]
+DATA_FORMAT = 'grid11'  # [map, grid11, gird33]
+MODEL = 'ANN'  # [LSTM_CNN, ANN, ANN_h16, ANN33, LSTM, LSTM11, UNet]
 
 # 训练参数
 EARLY_STOP = False
+STEP_LR = True
 EPOCH = 400
 if DATA_FORMAT == 'map' and DATA_ENHANCE:
     BATCH_SIZE = 32
@@ -35,12 +36,12 @@ elif DATA_FORMAT.startswith('grid'):
 else:
     raise '请配置正确的数据格式'
 
-LR = 0.001
+LR = 0.0001
 
 # 输出根目录
 # DESCRIPTION = "LSTM2_CNN1-原始值-zscore-lr.005-最小损失模型epoch150-输入n月输出n月"
 # DESCRIPTION = "LSTM-原始值-zscore-最小损失模型-输入n月1乘1输出1月1乘1-batch1024-epoch150-.001lr"
-DESCRIPTION = f"{MODEL}-{'早停模型' if EARLY_STOP else '最终模型'}-验证测试分开-输入{DATA_FORMAT}" \
+DESCRIPTION = f"{MODEL}relu-{'早停模型' if EARLY_STOP else '最小损失模型'}-验证测试分开-输入{DATA_FORMAT}" \
               f"{'增强'+str(DATA_ENHANCE*8+1)+'倍' if DATA_ENHANCE else ''}-" \
               f"batch{BATCH_SIZE}-epoch{EPOCH}-{LR}lr"
 LOSS_PATH = rf"./output/{DESCRIPTION}/loss"

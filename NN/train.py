@@ -1,6 +1,5 @@
 """模型搭建与训练"""
 import os.path
-from matplotlib import pyplot as plt
 from model import *
 from dataset import *
 from datetime import datetime
@@ -10,6 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 from NN_CONST import *
 from visdom import Visdom
+from torch.optim.lr_scheduler import StepLR
 
 
 class EarlyStopping:
@@ -61,6 +61,8 @@ class EarlyStopping:
 def train():
     viz = Visdom(env='PR')
     early_stopping = EarlyStopping(patience=7, verbose=True)
+    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
+    best_model_loss = float('inf')
 
     for epoch in range(EPOCH):
         # 模型训练
@@ -106,18 +108,28 @@ def train():
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
+        else:
+            # 查找损失最小模型
+            os.makedirs(MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}", exist_ok=True)
+            best_model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
+                                           rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
+            if testing_loss < best_model_loss and epoch > 20:
+                best_model_loss = testing_loss
+                torch.save(model, best_model_path, _use_new_zipfile_serialization=False)
+
+        # 动态学习率
+        if STEP_LR:
+            scheduler.step()
 
         # print(f"epoch:{epoch}   testing_loss:{valid_loss.item()}  "
         #       f"total_testing_loss:{testing_loss}")
         # for name, param in model.state_dict().items():
         #     print(f"{name}: {param}")
 
-        # total_training_loss_list.append(training_loss)
-        # total_test_loss_list.append(testing_loss)
-
-    final_model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
-                                    rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
-    torch.save(model, final_model_path, _use_new_zipfile_serialization=False)
+    # 保存最终模型
+    # final_model_path = MODEL_PATH + rf"/{DATE}/{CASE_NUM}/{TIME}/{BASIN}/{AREA}_{TRAIN_START_YEAR}-" \
+    #                                 rf"{TRAIN_END_YEAR}年模型(除{test_year}年).pth"
+    # torch.save(model, final_model_path, _use_new_zipfile_serialization=False)
 
 
 if __name__ == '__main__':

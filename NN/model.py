@@ -102,7 +102,7 @@ class LSTM11(nn.Module):
         super(LSTM11, self).__init__()
         self.shape = shape
         input_size = 1
-        hidden_size = 64
+        hidden_size = 16
         num_layers = 1
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -110,14 +110,12 @@ class LSTM11(nn.Module):
         self.fc = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
-        shape = self.shape
         x = x.view(len(x), 8, -1)
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         x, _ = self.lstm(x, (h0, c0))
         x = x[:, -1, :]
         x = self.fc(x)
-        # x = x.view(shape[0], 1, shape[2], shape[3])
         return x
 
 
@@ -128,11 +126,13 @@ class ANN(nn.Module):
         net = nn.Sequential()
         net.add_module(r'inputlayer',
                        nn.Linear(in_features=shape[1], out_features=4, bias=True))
-        net.add_module(r'inputact', nn.Tanh())
+        net.add_module(r'inputact', nn.ReLU())
+        # net.add_module(r'inputact', nn.Tanh())
         net.add_module(rf'hidlayer-1',
                        nn.Linear(in_features=4, out_features=4, bias=True))
         net.add_module(rf'drop-1', nn.Dropout())
-        net.add_module(rf'hidact-1', nn.Tanh())
+        # net.add_module(rf'hidact-1', nn.Tanh())
+        net.add_module(rf'hidact-1', nn.ReLU())
         net.add_module(r'outputlayer',
                        nn.Linear(in_features=4, out_features=1, bias=True))
         self.net = net
